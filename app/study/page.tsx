@@ -82,8 +82,6 @@ export default function StudyPage() {
         className="mx-auto"
         style={{
           maxWidth: '1242px',
-          paddingLeft: '24px',
-          paddingRight: '24px',
           paddingTop: '32px',
           paddingBottom: '60px',
         }}
@@ -91,7 +89,13 @@ export default function StudyPage() {
         {/* Toolbar */}
         <div
           className="flex items-center"
-          style={{ gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}
+          style={{
+            gap: '12px',
+            marginBottom: '28px',
+            flexWrap: 'nowrap',
+            width: '100%',
+            minWidth: 0,
+          }}
         >
           <Input
             value={modelName}
@@ -99,7 +103,8 @@ export default function StudyPage() {
             placeholder="Enter a unique name for your model"
             className="h-11"
             style={{
-              width: '300px',
+              flex: '1 1 180px',
+              minWidth: '140px',
               borderColor: '#D7D7D7',
               borderRadius: '7px',
               fontSize: '15px',
@@ -111,7 +116,7 @@ export default function StudyPage() {
             className="flex items-center"
             style={{
               gap: '10px',
-              padding: '11px 20px',
+              padding: '11px 16px',
               border: '1.5px solid #0E519B',
               borderRadius: '7px',
               background: '#F1F6FC',
@@ -119,20 +124,22 @@ export default function StudyPage() {
               fontSize: '15px',
               fontWeight: 600,
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             <CloudUpload className="w-5 h-5" />
             Upload Existing Study
           </button>
 
-          <span style={{ color: '#102C4A', fontSize: '15px' }}>Or</span>
+          <span style={{ color: '#102C4A', fontSize: '15px', flexShrink: 0 }}>Or</span>
 
           <button
             type="button"
             className="flex items-center"
             style={{
               gap: '10px',
-              padding: '11px 20px',
+              padding: '11px 16px',
               border: '1px solid #D7D7D7',
               borderRadius: '7px',
               background: '#fff',
@@ -140,6 +147,8 @@ export default function StudyPage() {
               fontSize: '15px',
               fontWeight: 500,
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             <FileDown className="w-5 h-5" style={{ color: '#102C4A' }} />
@@ -151,7 +160,7 @@ export default function StudyPage() {
             className="flex items-center"
             style={{
               gap: '10px',
-              padding: '11px 20px',
+              padding: '11px 16px',
               border: '1px solid #D7D7D7',
               borderRadius: '7px',
               background: '#fff',
@@ -159,6 +168,8 @@ export default function StudyPage() {
               fontSize: '15px',
               fontWeight: 500,
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             <CloudUpload className="w-5 h-5" style={{ color: '#102C4A' }} />
@@ -175,6 +186,7 @@ export default function StudyPage() {
               borderRadius: '7px',
               background: '#fff',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <FileSpreadsheet className="w-5 h-5" style={{ color: '#102C4A' }} />
@@ -190,18 +202,17 @@ export default function StudyPage() {
               borderRadius: '7px',
               background: '#fff',
               cursor: 'pointer',
+              flexShrink: 0,
             }}
           >
             <History className="w-5 h-5" style={{ color: '#102C4A' }} />
           </button>
 
-          <div style={{ flex: 1 }} />
-
           <button
             type="button"
             onClick={() => router.push('/dashboard')}
             style={{
-              padding: '11px 28px',
+              padding: '11px 22px',
               border: '1px solid #D7D7D7',
               borderRadius: '7px',
               background: '#fff',
@@ -209,6 +220,9 @@ export default function StudyPage() {
               fontSize: '15px',
               fontWeight: 500,
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              marginLeft: 'auto',
             }}
           >
             Cancel
@@ -217,7 +231,7 @@ export default function StudyPage() {
           <button
             type="button"
             style={{
-              padding: '11px 28px',
+              padding: '11px 22px',
               border: 'none',
               borderRadius: '7px',
               background: '#1F2A44',
@@ -225,6 +239,8 @@ export default function StudyPage() {
               fontSize: '15px',
               fontWeight: 600,
               cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
             }}
           >
             Save Study
@@ -398,6 +414,7 @@ export default function StudyPage() {
                       borderColor: '#D7D7D7',
                       borderRadius: '6px',
                       fontSize: '14px',
+                             padding: '0 16px',
                     }}
                   >
                     <SelectValue />

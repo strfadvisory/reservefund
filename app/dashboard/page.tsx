@@ -5,15 +5,9 @@ import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { Play, Search, UserPlus } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
+import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 const PROPERTY_MANAGERS = [
   { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
@@ -49,9 +43,6 @@ export default function DashboardPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
-  const [association, setAssociation] = useState('');
-  const [studyName, setStudyName] = useState('');
-  const [uploadFileName, setUploadFileName] = useState('');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -59,34 +50,19 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!inviteOpen && !uploadOpen) return;
+    if (!inviteOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [inviteOpen, uploadOpen]);
+  }, [inviteOpen]);
 
   const closeInvite = () => {
     setInviteOpen(false);
     setFirstName('');
     setLastName('');
     setEmail('');
-  };
-
-  const closeUpload = () => {
-    setUploadOpen(false);
-    setAssociation('');
-    setStudyName('');
-    setUploadFileName('');
-  };
-
-  const canCreateManually = association.trim() !== '' && studyName.trim() !== '';
-  const canUpload = association.trim() !== '' && uploadFileName.trim() !== '';
-
-  const submitUpload = () => {
-    closeUpload();
-    router.push('/study');
   };
 
   return (
@@ -106,8 +82,6 @@ export default function DashboardPage() {
           style={{
             width: '100%',
             maxWidth: '1242px',
-            paddingLeft: '24px',
-            paddingRight: '24px',
           }}
         >
           <h1
@@ -128,8 +102,6 @@ export default function DashboardPage() {
         className="mx-auto"
         style={{
           maxWidth: '1242px',
-          paddingLeft: '24px',
-          paddingRight: '24px',
           marginTop: '-88px',
         }}
       >

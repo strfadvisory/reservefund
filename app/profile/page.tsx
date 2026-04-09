@@ -363,6 +363,7 @@ export default function ProfilePage() {
                           borderColor: '#D7D7D7',
                           borderRadius: '7px',
                           fontSize: '16px',
+                                 padding: '0 16px',
                         }}
                       >
                         <SelectValue placeholder="" />
