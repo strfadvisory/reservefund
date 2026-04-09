@@ -162,10 +162,12 @@
   
   html {
     @apply font-sans;
+    font-size: 16px;
   }
-  
+
   body {
     @apply bg-background text-foreground font-sans;
+    font-size: 16px;
   }
 
   /* Typography - Headings (H1, H2, H3) */
