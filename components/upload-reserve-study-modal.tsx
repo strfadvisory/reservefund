@@ -2,15 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
 export type UploadReserveStudyModalProps = {
   open: boolean;
@@ -23,6 +17,7 @@ export function UploadReserveStudyModal({
   onClose,
   onSubmit,
 }: UploadReserveStudyModalProps) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [association, setAssociation] = useState('');
   const [studyName, setStudyName] = useState('');
@@ -54,11 +49,12 @@ export function UploadReserveStudyModal({
   const handleSubmit = () => {
     handleClose();
     onSubmit?.();
+    router.push('/study');
   };
 
   if (!mounted || !open) return null;
 
-  return createPortal(
+  const modalContent = (
     <div
       className="flex items-center justify-center"
       style={{
@@ -123,28 +119,28 @@ export function UploadReserveStudyModal({
             >
               Select Association<span>*</span>
             </Label>
-            <Select value={association} onValueChange={setAssociation}>
-              <SelectTrigger
-                id="urs-association"
-                className="w-full"
-                style={{
-                  height: '44px',
-                  borderColor: '#0E519B',
-                  borderRadius: '7px',
-                  fontSize: '16px',
-                  color: '#102C4A',
-                  padding: '0 16px',
-
-                }}
-              >
-                <SelectValue placeholder="Choose" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="caldron">Caldron Associations</SelectItem>
-                <SelectItem value="apex">Apex Global</SelectItem>
-                <SelectItem value="horizon">Horizon HOA</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              id="urs-association"
+              value={association}
+              onChange={(e) => setAssociation(e.target.value)}
+              style={{
+                width: '100%',
+                height: '44px',
+                border: '1px solid #D7D7D7',
+                borderRadius: '7px',
+                fontSize: '16px',
+                color: association ? '#102C4A' : '#999',
+                padding: '0 16px',
+                backgroundColor: '#fff',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="" disabled>Choose</option>
+              <option value="caldron">Caldron Associations</option>
+              <option value="apex">Apex Global</option>
+              <option value="horizon">Horizon HOA</option>
+            </select>
           </div>
 
           {/* Reserver Study Name */}
@@ -300,7 +296,7 @@ export function UploadReserveStudyModal({
             Upload
           </button>
 
-          {/* Now now */}
+          {/* Not now */}
           <div className="text-center" style={{ marginTop: '18px' }}>
             <button
               type="button"
@@ -314,12 +310,13 @@ export function UploadReserveStudyModal({
                 cursor: 'pointer',
               }}
             >
-              Now now
+              Not now
             </button>
           </div>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

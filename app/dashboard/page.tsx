@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { Play, Search, UserPlus, X } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
+import { TabSwitcher } from '@/components/tab-switcher';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -73,6 +74,7 @@ export default function DashboardPage() {
   >(null);
   const [introOpen, setIntroOpen] = useState(false);
   const [dontShowIntro, setDontShowIntro] = useState(false);
+  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
 
   useEffect(() => {
     setMounted(true);
@@ -168,7 +170,7 @@ export default function DashboardPage() {
         className="mx-auto"
         style={{
           maxWidth: '1242px',
-          marginTop: '-88px',
+          marginTop: '-110px',
         }}
       >
         {/* Info Card */}
@@ -265,6 +267,7 @@ export default function DashboardPage() {
               status: a.status,
             }))}
             cta="+ Add Associations"
+            onCtaClick={() => router.push('/associations')}
           />
 
           {/* Column 4: Reserver Study */}
@@ -386,6 +389,7 @@ export default function DashboardPage() {
                     borderColor: '#D7D7D7',
                     borderRadius: '7px',
                     fontSize: '15px',
+                    backgroundColor: '#fff',
                   }}
                 />
               </div>
@@ -394,35 +398,11 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            <div
-              className="flex items-center"
-              style={{
-                background: '#fff',
-                border: '1px solid #D7D7D7',
-                borderRadius: '7px',
-                padding: '4px',
-                gap: '4px',
-              }}
-            >
-              {FILTERS.map((f, idx) => (
-                <button
-                  key={f}
-                  type="button"
-                  style={{
-                    padding: '8px 20px',
-                    border: idx === 0 ? '1px solid #0E519B' : '1px solid transparent',
-                    borderRadius: '5px',
-                    background: '#fff',
-                    color: idx === 0 ? '#0E519B' : '#102C4A',
-                    fontSize: '14px',
-                    fontWeight: idx === 0 ? 600 : 500,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+            <TabSwitcher
+              tabs={FILTERS}
+              activeTab={activeFilter}
+              onTabChange={setActiveFilter}
+            />
           </div>
 
           {/* Table */}
@@ -995,7 +975,7 @@ function ListColumn({
   return (
     <div
       style={{
-        padding: '28px 28px',
+        padding: '18px 28px',
         borderRight: noBorder ? 'none' : '1px solid #D7D7D7',
         display: 'flex',
         flexDirection: 'column',
@@ -1024,7 +1004,7 @@ function ListColumn({
               <div
                 style={{
                   color: '#102C4A',
-                  fontSize: '14px',
+                  fontSize: '16px',
                   fontWeight: 500,
                   marginBottom: '4px',
                   overflow: 'hidden',
@@ -1037,7 +1017,7 @@ function ListColumn({
               <div
                 style={{
                   color: '#66717D',
-                  fontSize: '13px',
+                  fontSize: '16px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',

@@ -405,7 +405,7 @@ function InfoPageContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => markTouched('email')}
                   className="h-11"
-                  style={{ borderColor: touched.email && (!email.trim() || !emailValid) ? '#DC2626' : '#0E519B', borderRadius: '7px', fontSize: '16px' }}
+                  style={{   borderRadius: '7px', fontSize: '16px' }}
                 />
                 {touched.email && !email.trim() && (
                   <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>

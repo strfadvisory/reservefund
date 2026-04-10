@@ -76,7 +76,7 @@ export default function LoginPage() {
                   onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                   className="h-11"
                   style={{
-                    borderColor: touched.email && !email.trim() ? '#DC2626' : '#0E519B',
+               
                     borderRadius: '7px',
                     fontSize: '16px',
                   }}
