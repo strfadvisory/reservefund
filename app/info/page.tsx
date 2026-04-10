@@ -612,7 +612,7 @@ function InfoPageContent() {
               </div>
               <div
                 className="flex flex-col items-end gap-2"
-                style={{ color: '#66717D', fontSize: '14px' }}
+                style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
               >
                 <a href="/privacy">Privacy Policy</a>
                 <span>Copyright2026 @ reservefundadvisory.com</span>

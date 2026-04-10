@@ -519,7 +519,7 @@ export default function ProfilePage() {
                 </div>
                 <div
                   className="flex flex-col items-end gap-2"
-                  style={{ color: '#66717D', fontSize: '14px' }}
+                  style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
                 >
                   <Link href="/privacy">Privacy Policy</Link>
                   <span>Copyright2026 @ reservefundadvisory.com</span>

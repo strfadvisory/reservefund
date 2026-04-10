@@ -3,11 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { Play, Search, UserPlus } from 'lucide-react';
+import { Play, Search, UserPlus, X } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const PROPERTY_MANAGERS = [
   { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
@@ -28,10 +29,22 @@ const RESERVE_STUDIES = [
 ];
 
 const GUIDES = [
-  'How can your manage property mangaer and roles',
-  'How can your manage Assocaions and roles',
-  'How to use Samulator for better calculation',
-  'How to use Samulator for better calculation',
+  {
+    title: 'How can your manage property mangaer and roles',
+    videoUrl: '/video/movie.mp4',
+  },
+  {
+    title: 'How can your manage Assocaions and roles',
+    videoUrl: '/video/movie.mp4',
+  },
+  {
+    title: 'How to use Samulator for better calculation',
+    videoUrl: '/video/movie.mp4',
+  },
+  {
+    title: 'How to use Samulator for better calculation',
+    videoUrl: '/video/movie.mp4',
+  },
 ];
 
 const FILTERS = ['Today', 'Yesterday', 'Last 7 Days', 'This Month'];
@@ -44,10 +57,42 @@ export default function DashboardPage() {
   const [email, setEmail] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activeGuide, setActiveGuide] = useState<
+    { title: string; videoUrl: string } | null
+  >(null);
+  const [introOpen, setIntroOpen] = useState(false);
+  const [dontShowIntro, setDontShowIntro] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      const hidden = window.localStorage.getItem('dashboard-invite-intro-hidden');
+      if (hidden !== 'true') {
+        setIntroOpen(true);
+      }
+    }
   }, []);
+
+  useEffect(() => {
+    if (!introOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [introOpen]);
+
+  const closeIntro = () => {
+    if (dontShowIntro && typeof window !== 'undefined') {
+      window.localStorage.setItem('dashboard-invite-intro-hidden', 'true');
+    }
+    setIntroOpen(false);
+  };
+
+  const openInviteFromIntro = () => {
+    closeIntro();
+    setInviteOpen(true);
+  };
 
   useEffect(() => {
     if (!inviteOpen) return;
@@ -57,6 +102,15 @@ export default function DashboardPage() {
       document.body.style.overflow = prev;
     };
   }, [inviteOpen]);
+
+  useEffect(() => {
+    if (!activeGuide) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [activeGuide]);
 
   const closeInvite = () => {
     setInviteOpen(false);
@@ -232,8 +286,12 @@ export default function DashboardPage() {
               gap: '24px',
             }}
           >
-            {GUIDES.map((title, idx) => (
-              <div key={idx}>
+            {GUIDES.map((guide, idx) => (
+              <div
+                key={idx}
+                onClick={() => setActiveGuide(guide)}
+                style={{ cursor: 'pointer' }}
+              >
                 <div
                   style={{
                     position: 'relative',
@@ -292,7 +350,7 @@ export default function DashboardPage() {
                     lineHeight: 1.4,
                   }}
                 >
-                  {title}
+                  {guide.title}
                 </p>
               </div>
             ))}
@@ -434,6 +492,212 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Invite Intro Popup */}
+      {mounted && introOpen &&
+        createPortal(
+          <div
+            className="flex items-center justify-center"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(16, 44, 74, 0.55)',
+              backdropFilter: 'blur(2px)',
+              zIndex: 1000,
+              padding: '16px',
+              overflowY: 'auto',
+            }}
+            onClick={closeIntro}
+          >
+            <div
+              className="bg-white"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '643px',
+                maxWidth: '100%',
+                border: '1px solid #D7D7D7',
+                borderRadius: '7px',
+                boxShadow: '0 20px 60px rgba(16, 44, 74, 0.25)',
+                margin: 'auto',
+              }}
+            >
+              {/* Header */}
+              <div
+                style={{
+                  padding: '24px 32px',
+                  borderBottom: '1px solid #D7D7D7',
+                }}
+              >
+                <h2
+                  className="font-semibold"
+                  style={{
+                    color: '#102C4A',
+                    fontSize: '24px',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Invite Properties Manager
+                </h2>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '28px 32px 24px' }}>
+                <p
+                  style={{
+                    color: '#102C4A',
+                    fontSize: '16px',
+                    lineHeight: 1.5,
+                    marginBottom: '24px',
+                  }}
+                >
+                  Invite people to collaborate, manage Association, Reserver
+                  studies, and review versions together.
+                </p>
+
+                {/* Step 01 */}
+                <div
+                  className="flex items-center"
+                  style={{ gap: '20px', marginBottom: '20px' }}
+                >
+                  <div
+                    className="flex items-center justify-center shrink-0"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '9999px',
+                      border: '1px solid #D7D7D7',
+                      color: '#102C4A',
+                      fontSize: '16px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    01
+                  </div>
+                  <p
+                    style={{
+                      color: '#102C4A',
+                      fontSize: '16px',
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    Invite members to collaborate and manage
+                    <br />
+                    studies together.
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    height: '1px',
+                    background: '#E5E7EB',
+                    margin: '0 0 20px',
+                  }}
+                />
+
+                {/* Step 02 */}
+                <div
+                  className="flex items-center"
+                  style={{ gap: '20px', marginBottom: '28px' }}
+                >
+                  <div
+                    className="flex items-center justify-center shrink-0"
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '9999px',
+                      border: '1px solid #D7D7D7',
+                      color: '#102C4A',
+                      fontSize: '16px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    02
+                  </div>
+                  <p
+                    style={{
+                      color: '#102C4A',
+                      fontSize: '16px',
+                      lineHeight: 1.5,
+                      margin: 0,
+                    }}
+                  >
+                    Add members or managers to help you
+                    <br />
+                    create, review, and manage studies.
+                  </p>
+                </div>
+
+                {/* Invite Property Manager Button */}
+                <button
+                  type="button"
+                  onClick={openInviteFromIntro}
+                  className="w-full flex items-center justify-center font-semibold text-white transition-all duration-200 hover:opacity-95"
+                  style={{
+                    backgroundColor: '#0E519B',
+                    borderRadius: '7px',
+                    padding: '14px',
+                    fontSize: '16px',
+                    gap: '10px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Invite Property Manager
+                  <UserPlus className="w-5 h-5" />
+                </button>
+
+                {/* Footer row */}
+                <div
+                  className="flex items-center justify-between"
+                  style={{ marginTop: '18px' }}
+                >
+                  <div className="flex items-center" style={{ gap: '8px' }}>
+                    <Checkbox
+                      id="dontShowIntro"
+                      checked={dontShowIntro}
+                      onCheckedChange={(v) => setDontShowIntro(v === true)}
+                      className="size-5"
+                      style={{
+                        borderColor: '#D7D7D7',
+                        borderWidth: '1px',
+                        borderRadius: '4px',
+                        backgroundColor: dontShowIntro ? '#0E519B' : '#FFFFFF',
+                      }}
+                    />
+                    <Label
+                      htmlFor="dontShowIntro"
+                      className="cursor-pointer"
+                      style={{ color: '#102C4A', fontSize: '16px' }}
+                    >
+                      Don&apos;t show me again
+                    </Label>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeIntro}
+                    style={{
+                      color: '#102C4A',
+                      fontSize: '16px',
+                      fontWeight: 500,
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Skip for now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
 
       {/* Invite Properties Manager Modal */}
       {mounted && inviteOpen &&
@@ -608,7 +872,13 @@ export default function DashboardPage() {
         )}
 
       {/* Upload Reserver Study Modal */}
-      {mounted && uploadOpen &&
+      <UploadReserveStudyModal
+        open={uploadOpen}
+        onClose={() => setUploadOpen(false)}
+      />
+
+      {/* Watch Guide Video Modal */}
+      {mounted && activeGuide &&
         createPortal(
           <div
             className="flex items-center justify-center"
@@ -620,256 +890,76 @@ export default function DashboardPage() {
               bottom: 0,
               width: '100vw',
               height: '100vh',
-              backgroundColor: 'rgba(16, 44, 74, 0.55)',
+              backgroundColor: 'rgba(16, 44, 74, 0.7)',
               backdropFilter: 'blur(2px)',
               zIndex: 1000,
               padding: '16px',
-              overflowY: 'auto',
             }}
-            onClick={closeUpload}
+            onClick={() => setActiveGuide(null)}
           >
             <div
-              className="bg-white"
               onClick={(e) => e.stopPropagation()}
               style={{
-                width: '643px',
+                position: 'relative',
+                width: '860px',
                 maxWidth: '100%',
-                border: '1px solid #D7D7D7',
-                borderRadius: '7px',
-                boxShadow: '0 20px 60px rgba(16, 44, 74, 0.25)',
-                margin: 'auto',
+                background: '#000',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
               }}
             >
-              {/* Header */}
               <div
+                className="flex items-center justify-between"
                 style={{
-                  padding: '24px 32px',
-                  borderBottom: '1px solid #D7D7D7',
+                  padding: '16px 20px',
+                  background: '#102C4A',
                 }}
               >
-                <h2
-                  className="font-semibold"
+                <h3
                   style={{
-                    color: '#102C4A',
-                    fontSize: '24px',
-                    lineHeight: 1.3,
+                    color: '#FFFFFF',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    margin: 0,
+                    flex: 1,
+                    marginRight: '12px',
                   }}
                 >
-                  Upload Reserver Study
-                </h2>
-              </div>
-
-              {/* Body */}
-              <div style={{ padding: '28px 32px 24px' }}>
-                {/* Select Association */}
-                <div style={{ marginBottom: '20px' }}>
-                  <Label
-                    htmlFor="association"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
-                    Select Association<span>*</span>
-                  </Label>
-                  <Select value={association} onValueChange={setAssociation}>
-                    <SelectTrigger
-                      id="association"
-                      className="w-full"
-                      style={{
-                        height: '44px',
-                        borderColor: '#0E519B',
-                        borderRadius: '7px',
-                        fontSize: '16px',
-                        color: association ? '#102C4A' : '#102C4A',
-                      }}
-                    >
-                      <SelectValue placeholder="Choose" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="caldron">Caldron Associations</SelectItem>
-                      <SelectItem value="apex">Apex Global</SelectItem>
-                      <SelectItem value="horizon">Horizon HOA</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Reserver Study Name */}
-                <div style={{ marginBottom: '24px' }}>
-                  <Label
-                    htmlFor="studyName"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
-                    Reserver Study Name <span>*</span>
-                  </Label>
-                  <Input
-                    id="studyName"
-                    value={studyName}
-                    onChange={(e) => setStudyName(e.target.value)}
-                    className="h-11"
-                    style={{
-                      borderColor: '#D7D7D7',
-                      borderRadius: '7px',
-                      fontSize: '16px',
-                    }}
-                  />
-                </div>
-
-                {/* Create Manually */}
+                  {activeGuide.title}
+                </h3>
                 <button
                   type="button"
-                  disabled={!canCreateManually}
-                  onClick={submitUpload}
-                  className="w-full font-semibold transition-all duration-200"
+                  onClick={() => setActiveGuide(null)}
+                  aria-label="Close"
                   style={{
-                    background: '#EFF4FA',
-                    color: canCreateManually ? '#0E519B' : '#A6B2C1',
-                    borderRadius: '7px',
-                    padding: '14px',
-                    fontSize: '16px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '9999px',
+                    background: 'rgba(255,255,255,0.12)',
                     border: 'none',
-                    cursor: canCreateManually ? 'pointer' : 'not-allowed',
-                    opacity: canCreateManually ? 1 : 0.7,
+                    color: '#fff',
+                    cursor: 'pointer',
                   }}
                 >
-                  Create Manually
+                  <X className="w-4 h-4" />
                 </button>
-
-                {/* Or divider */}
-                <div
-                  className="flex items-center"
-                  style={{ margin: '24px 0', gap: '16px' }}
-                >
-                  <div style={{ flex: 1, height: '1px', background: '#D7D7D7' }} />
-                  <span style={{ color: '#102C4A', fontSize: '16px' }}>Or</span>
-                  <div style={{ flex: 1, height: '1px', background: '#D7D7D7' }} />
-                </div>
-
-                {/* Template description + download link */}
-                <div
-                  className="flex items-start justify-between"
-                  style={{ gap: '16px', marginBottom: '12px' }}
-                >
-                  <p
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '15px',
-                      lineHeight: 1.5,
-                      maxWidth: '360px',
-                    }}
-                  >
-                    Download the template format and upload the completed file
-                    here
-                  </p>
-                  <button
-                    type="button"
-                    style={{
-                      color: '#0E519B',
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Download Template
-                  </button>
-                </div>
-
-                {/* File upload field */}
-                <div
-                  className="flex items-stretch"
-                  style={{
-                    border: '1px solid #D7D7D7',
-                    borderRadius: '7px',
-                    overflow: 'hidden',
-                    marginBottom: '28px',
-                  }}
-                >
-                  <label
-                    htmlFor="fileUpload"
-                    style={{
-                      padding: '12px 22px',
-                      borderRight: '1px solid #D7D7D7',
-                      color: '#102C4A',
-                      fontSize: '15px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                      background: '#fff',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    Upload
-                  </label>
-                  <input
-                    id="fileUpload"
-                    type="file"
-                    style={{ display: 'none' }}
-                    onChange={(e) =>
-                      setUploadFileName(e.target.files?.[0]?.name || '')
-                    }
-                  />
-                  <div
-                    className="flex items-center"
-                    style={{
-                      flex: 1,
-                      padding: '12px 16px',
-                      color: '#66717D',
-                      fontSize: '15px',
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {uploadFileName}
-                  </div>
-                </div>
-
-                {/* Upload submit */}
-                <button
-                  type="button"
-                  disabled={!canUpload}
-                  onClick={submitUpload}
-                  className="w-full font-semibold text-white transition-all duration-200"
-                  style={{
-                    backgroundColor: canUpload ? '#0E519B' : '#B5BCC4',
-                    borderRadius: '7px',
-                    padding: '14px',
-                    fontSize: '16px',
-                    border: 'none',
-                    cursor: canUpload ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  Upload
-                </button>
-
-                {/* Now now */}
-                <div className="text-center" style={{ marginTop: '18px' }}>
-                  <button
-                    type="button"
-                    onClick={closeUpload}
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Now now
-                  </button>
-                </div>
               </div>
+              <video
+                key={activeGuide.videoUrl}
+                src={activeGuide.videoUrl}
+                controls
+                autoPlay
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  aspectRatio: '16 / 9',
+                  background: '#000',
+                }}
+              />
             </div>
           </div>,
           document.body
