@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { MoreHorizontal, UserPlus } from 'lucide-react';
+import { MoreHorizontal, UserPlus, Upload } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
@@ -147,9 +147,9 @@ export default function AssociationsPage() {
                   >
                     <span
                       style={{
-                        color: isActive ? '#102C4A' : isCompleted ? '#0E519B' : '#66717D',
+                        color: isActive || isCompleted ? '#102C4A' : '#66717D',
                         fontSize: '13px',
-                        fontWeight: isActive ? 600 : 400,
+                        fontWeight: isActive || isCompleted ? 600 : 400,
                         lineHeight: 1.4,
                         display: 'block',
                       }}
@@ -507,23 +507,28 @@ export default function AssociationsPage() {
                     activate their account or accept your invitation. Once accepted, they will be
                     able to access the account.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setInviteOpen(true)}
-                    style={{
-                      marginTop: '24px',
-                      padding: '12px 48px',
-                      border: '1px solid #D7D7D7',
-                      background: '#fff',
-                      borderRadius: '7px',
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Invite Member
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setInviteOpen(true)}
+                      className="flex items-center justify-center"
+                      style={{
+                        marginTop: '24px',
+                        padding: '12px 48px',
+                        border: '1px solid #D7D7D7',
+                        background: '#fff',
+                        borderRadius: '7px',
+                        color: '#102C4A',
+                        fontSize: '16px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        gap: '10px',
+                      }}
+                    >
+                      <UserPlus className="w-5 h-5" />
+                      Invite Member
+                    </button>
+                  </div>
                 </div>
 
                 {/* Members list */}
@@ -658,23 +663,28 @@ export default function AssociationsPage() {
                     <br />
                     or download the template and upload it for the study.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => setUploadOpen(true)}
-                    style={{
-                      marginTop: '24px',
-                      padding: '12px 48px',
-                      border: '1px solid #D7D7D7',
-                      background: '#fff',
-                      borderRadius: '7px',
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      fontWeight: 500,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Upload
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => setUploadOpen(true)}
+                      className="flex items-center justify-center"
+                      style={{
+                        marginTop: '24px',
+                        padding: '12px 48px',
+                        border: '1px solid #D7D7D7',
+                        background: '#fff',
+                        borderRadius: '7px',
+                        color: '#102C4A',
+                        fontSize: '16px',
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        gap: '10px',
+                      }}
+                    >
+                      <Upload className="w-5 h-5" />
+                      Upload
+                    </button>
+                  </div>
                 </div>
 
                 {/* Studies list */}
