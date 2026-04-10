@@ -192,9 +192,18 @@
     @apply text-sm font-normal text-text-secondary;
   }
 
-  /* Links */
+  /* Links - inherit parent color and remove underline */
   a {
-    @apply text-link-color hover:underline transition-colors;
+    color: inherit;
+    text-decoration: none;
+  }
+  
+  a:link,
+  a:visited,
+  a:hover,
+  a:active {
+    color: inherit;
+    text-decoration: none;
   }
 
   /* Form Elements */
@@ -203,6 +212,16 @@
   select {
     @apply border border-form-outline rounded-lg px-3 py-2 text-base;
     @apply focus:border-selected-border focus:ring-2 focus:ring-selected-border/20;
+  }
+
+  input[type='text'],
+  input[type='email'],
+  input[type='password'],
+  input[type='tel'],
+  input[type='url'],
+  input[type='search'],
+  input[type='number'] {
+    @apply focus:border-form-outline focus:ring-2 focus:ring-form-outline/20;
   }
 
   input[type='radio'],
@@ -219,3 +238,4 @@
 .text-secondary-type {
   @apply text-base font-normal text-text-secondary;
 }
+

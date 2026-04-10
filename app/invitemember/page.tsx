@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { User, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 
 const MEMBERS = [
   {
@@ -34,6 +35,8 @@ export default function InviteMemberPage() {
   const [modifyStudy, setModifyStudy] = useState(true);
   const [createPlans, setCreatePlans] = useState(true);
   const [viewPlans, setViewPlans] = useState(true);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -55,6 +58,7 @@ export default function InviteMemberPage() {
     setLastName('');
     setEmail('');
     setDesignation('');
+    setTouched({});
   };
 
   const handleConfirm = () => {
@@ -67,31 +71,10 @@ export default function InviteMemberPage() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar - fixed width, always on the left */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative">
+      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative md:ml-[353px]">
         <div className="flex-1 flex justify-center items-center py-12 px-6">
           <div
             className="w-full flex flex-col my-auto"
@@ -286,35 +269,7 @@ export default function InviteMemberPage() {
               </div>
             </div>
 
-            {/* Footer (outside the card) */}
-            <div style={{ marginTop: '32px' }}>
-              <div className="flex justify-between items-start">
-                <div
-                  className="flex flex-col gap-2"
-                  style={{ color: '#66717D', fontSize: '14px' }}
-                >
-                  <a
-                    href="mailto:info@reservefundadvisory.com"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>@</span> info@reservefundadvisory.com
-                  </a>
-                  <a
-                    href="tel:727-788-4800"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>☎</span> 727-788-4800
-                  </a>
-                </div>
-                <div
-                  className="flex flex-col items-end gap-2"
-                  style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
-                >
-                  <Link href="/privacy">Privacy Policy</Link>
-                  <span>Copyright2026 @ reservefundadvisory.com</span>
-                </div>
-              </div>
-            </div>
+            <PageFooter />
           </div>
         </div>
       </div>
@@ -394,13 +349,17 @@ export default function InviteMemberPage() {
                       id="imFirstName"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      onBlur={() => markTouched('firstName')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.firstName && !firstName.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.firstName && !firstName.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                   <div>
                     <Label
@@ -418,13 +377,17 @@ export default function InviteMemberPage() {
                       id="imLastName"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      onBlur={() => markTouched('lastName')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.lastName && !lastName.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.lastName && !lastName.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                 </div>
 
@@ -450,13 +413,17 @@ export default function InviteMemberPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      onBlur={() => markTouched('email')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.email && !email.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.email && !email.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                   <div>
                     <Label
@@ -474,13 +441,17 @@ export default function InviteMemberPage() {
                       id="imDesignation"
                       value={designation}
                       onChange={(e) => setDesignation(e.target.value)}
+                      onBlur={() => markTouched('designation')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.designation && !designation.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.designation && !designation.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                 </div>
 

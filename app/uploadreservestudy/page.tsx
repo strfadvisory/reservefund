@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CloudUpload, MoreHorizontal } from 'lucide-react';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 
 const STUDIES = [
   'Association Reserve Study',
@@ -28,31 +29,10 @@ export default function UploadReserveStudyPage() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar - fixed width, always on the left */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative">
+      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative md:ml-[353px]">
         <div className="flex-1 flex justify-center items-center py-12 px-6">
           <div
             className="w-full flex flex-col my-auto"
@@ -240,35 +220,7 @@ export default function UploadReserveStudyPage() {
               </div>
             </div>
 
-            {/* Footer (outside the card) */}
-            <div style={{ marginTop: '32px' }}>
-              <div className="flex justify-between items-start">
-                <div
-                  className="flex flex-col gap-2"
-                  style={{ color: '#66717D', fontSize: '14px' }}
-                >
-                  <a
-                    href="mailto:info@reservefundadvisory.com"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>@</span> info@reservefundadvisory.com
-                  </a>
-                  <a
-                    href="tel:727-788-4800"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>☎</span> 727-788-4800
-                  </a>
-                </div>
-                <div
-                  className="flex flex-col items-end gap-2"
-                  style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
-                >
-                  <Link href="/privacy">Privacy Policy</Link>
-                  <span>Copyright2026 @ reservefundadvisory.com</span>
-                </div>
-              </div>
-            </div>
+            <PageFooter />
           </div>
         </div>
       </div>

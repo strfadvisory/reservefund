@@ -74,7 +74,7 @@ export default function StudyPage() {
   const [modelName, setModelName] = useState('');
 
   return (
-    <div className="min-h-screen" style={{ background: '#F6F7F9' }}>
+    <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
       <DashboardHeader role="Property Manager" />
 
       {/* Page body */}

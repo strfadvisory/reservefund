@@ -1,18 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,31 +23,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6">
+      <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6 md:ml-[353px]">
         <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
           {/* Form Card */}
           <form
@@ -92,13 +73,17 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                   className="h-11"
                   style={{
-                    borderColor: '#0E519B',
+                    borderColor: touched.email && !email.trim() ? '#DC2626' : '#0E519B',
                     borderRadius: '7px',
                     fontSize: '16px',
                   }}
                 />
+                {touched.email && !email.trim() && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                )}
               </div>
 
               <div style={{ marginBottom: '16px' }}>
@@ -118,13 +103,17 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  onBlur={() => setTouched((t) => ({ ...t, password: true }))}
                   className="h-11"
                   style={{
-                    borderColor: '#D7D7D7',
+                    borderColor: touched.password && !password.trim() ? '#DC2626' : '#D7D7D7',
                     borderRadius: '7px',
                     fontSize: '16px',
                   }}
                 />
+                {touched.password && !password.trim() && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                )}
               </div>
 
               <div
@@ -147,7 +136,7 @@ export default function LoginPage() {
                 </div>
                 <Link
                   href="/forgetpassword"
-                  style={{ color: '#0E519B', fontSize: '16px', fontWeight: 500 }}
+                  style={{ color: 'inherit', fontSize: '16px', fontWeight: 500 }}
                 >
                   Forgot Password?
                 </Link>
@@ -177,42 +166,14 @@ export default function LoginPage() {
             >
               <Link
                 href="/register"
-                style={{ color: '#0E519B', fontSize: '16px', fontWeight: 600 }}
+                style={{ color: 'inherit', fontSize: '16px', fontWeight: 600 }}
               >
                 I don&apos;t have an account
               </Link>
             </div>
           </form>
 
-          {/* Footer */}
-          <div style={{ marginTop: '32px' }}>
-            <div className="flex justify-between items-start">
-              <div
-                className="flex flex-col gap-2"
-                style={{ color: '#66717D' }}
-              >
-                <a
-                  href="mailto:info@reservefundadvisory.com"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>@</span> info@reservefundadvisory.com
-                </a>
-                <a
-                  href="tel:727-788-4800"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>☎</span> 727-788-4800
-                </a>
-              </div>
-              <div
-                className="flex flex-col items-end gap-2"
-                style={{ color: '#66717D', textAlign: 'right' }}
-              >
-                <a href="/privacy">Privacy Policy</a>
-                <span>Copyright2026 @ reservefundadvisory.com</span>
-              </div>
-            </div>
-          </div>
+          <PageFooter />
         </div>
       </div>
     </div>

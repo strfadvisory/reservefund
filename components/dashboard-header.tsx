@@ -51,25 +51,25 @@ export function DashboardHeader({
     <header
       className="flex items-center"
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
         height: '64px',
         background: '#0E519B',
         width: '100%',
         paddingLeft: '32px',
         paddingRight: '32px',
+        zIndex: 50,
       }}
     >
       {/* Logo + Company */}
       <div className="flex items-center" style={{ gap: '12px' }}>
-        <div
-          className="flex items-center justify-center"
-          style={{ width: '36px', height: '36px' }}
-        >
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-            <path d="M4 4 L10 4 L4 22 L10 22 Z" fill="#FFFFFF" />
-            <path d="M12 4 L18 4 L12 22 L18 22 Z" fill="#FFFFFF" />
-            <path d="M20 4 L26 4 L20 22 L26 22 Z" fill="#FFFFFF" />
-          </svg>
-        </div>
+        <img
+          src="/images/clogo.png"
+          alt="Logo"
+          style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+        />
         <button
           type="button"
           onClick={() => setOpen(true)}

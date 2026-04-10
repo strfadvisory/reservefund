@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(npx shadcn@latest:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(grep:*)",
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

@@ -9,9 +9,10 @@ import {
   KeyboardEvent,
   ClipboardEvent,
 } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 
 const OTP_LENGTH = 5;
 const RESEND_SECONDS = 30;
@@ -43,6 +44,7 @@ function OtpPageContent() {
 
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  const [error, setError] = useState('');
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -66,6 +68,7 @@ function OtpPageContent() {
   const handleChange = (index: number, raw: string) => {
     const value = raw.replace(/\D/g, '').slice(-1);
     setDigitAt(index, value);
+    if (error) setError('');
     if (value && index < OTP_LENGTH - 1) {
       inputsRef.current[index + 1]?.focus();
     }
@@ -110,37 +113,19 @@ function OtpPageContent() {
   };
 
   const handleConfirm = () => {
-    if (!canConfirm) return;
+    if (!canConfirm) {
+      setError('Please enter a valid OTP');
+      return;
+    }
     router.push('/profile');
   };
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar - fixed width, always on the left */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content - fills remaining width */}
-      <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6">
+      <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6 md:ml-[353px]">
         <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
           {/* Form Card */}
           <div
@@ -216,8 +201,9 @@ function OtpPageContent() {
                       minWidth: 0,
                       height: '56px',
                       fontSize: '24px',
+                      fontWeight: 700,
                       color: '#102C4A',
-                      border: `1px solid ${d !== '' ? '#0E519B' : '#D7D7D7'}`,
+                      border: `1px solid ${error && d === '' ? '#DC2626' : d !== '' ? '#0E519B' : '#D7D7D7'}`,
                       borderRadius: '7px',
                       boxSizing: 'border-box',
                       padding: 0,
@@ -225,6 +211,12 @@ function OtpPageContent() {
                   />
                 ))}
               </div>
+
+              {error && (
+                <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '8px' }}>
+                  {error}
+                </p>
+              )}
 
               {/* Timer and Resend */}
               <div
@@ -287,35 +279,7 @@ function OtpPageContent() {
             </div>
           </div>
 
-          {/* Footer (outside the card) */}
-          <div style={{ marginTop: '32px' }}>
-            <div className="flex justify-between items-start">
-              <div
-                className="flex flex-col gap-2"
-                style={{ color: '#66717D', fontSize: '14px' }}
-              >
-                <a
-                  href="mailto:info@reservefundadvisory.com"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>@</span> info@reservefundadvisory.com
-                </a>
-                <a
-                  href="tel:727-788-4800"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>☎</span> 727-788-4800
-                </a>
-              </div>
-              <div
-                className="flex flex-col items-end gap-2"
-                style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
-              >
-                <a href="/privacy">Privacy Policy</a>
-                <span>Copyright2026 @ reservefundadvisory.com</span>
-              </div>
-            </div>
-          </div>
+          <PageFooter />
         </div>
       </div>
     </div>

@@ -6,7 +6,10 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { PhoneInput } from '@/components/ui/phone-input';
 import { Label } from '@/components/ui/label';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 
 const COMPANY_TYPES: Record<string, { label: string; icon: string }> = {
   management: {
@@ -87,77 +90,71 @@ function InfoPageContent() {
   const [rePassword, setRePassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
 
   const passwordScore = useMemo(
     () => PASSWORD_RULES.filter((r) => r.test(password)).length,
     [password]
   );
 
-  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const canContinue =
-    companyName.trim() !== '' &&
-    firstName.trim() !== '' &&
-    lastName.trim() !== '' &&
-    designation.trim() !== '' &&
-    phone.trim() !== '' &&
-    emailValid &&
-    passwordScore === 5 &&
-    password === rePassword;
+  const emailValid = useMemo(
+    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+    [email]
+  );
+
+  const canContinue = useMemo(
+    () =>
+      companyName.trim() !== '' &&
+      firstName.trim() !== '' &&
+      lastName.trim() !== '' &&
+      designation.trim() !== '' &&
+      phone.trim() !== '' &&
+      emailValid &&
+      passwordScore === 5 &&
+      password === rePassword,
+    [companyName, firstName, lastName, designation, phone, emailValid, passwordScore, password, rePassword]
+  );
 
   const handleContinue = () => {
     if (!canContinue) return;
     router.push(`/otp?type=${typeKey}&email=${encodeURIComponent(email)}`);
   };
 
-  const strengthLabel =
-    passwordScore <= 1
-      ? 'Weak'
-      : passwordScore <= 2
-      ? 'Fair'
-      : passwordScore <= 3
-      ? 'Good'
-      : passwordScore <= 4
-      ? 'Strong'
-      : 'Excellent';
+  const strengthLabel = useMemo(
+    () =>
+      passwordScore <= 1
+        ? 'Weak'
+        : passwordScore <= 2
+        ? 'Fair'
+        : passwordScore <= 3
+        ? 'Good'
+        : passwordScore <= 4
+        ? 'Strong'
+        : 'Excellent',
+    [passwordScore]
+  );
 
-  const strengthColor =
-    passwordScore <= 1
-      ? '#DC2626'
-      : passwordScore <= 2
-      ? '#F59E0B'
-      : passwordScore <= 3
-      ? '#EAB308'
-      : passwordScore <= 4
-      ? '#22C55E'
-      : '#16A34A';
+  const strengthColor = useMemo(
+    () =>
+      passwordScore <= 1
+        ? '#DC2626'
+        : passwordScore <= 2
+        ? '#F59E0B'
+        : passwordScore <= 3
+        ? '#EAB308'
+        : passwordScore <= 4
+        ? '#22C55E'
+        : '#16A34A',
+    [passwordScore]
+  );
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar - fixed width, always on the left */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content - fills remaining width */}
-      <div className="flex-1 min-w-0 flex justify-center items-start overflow-auto py-12 px-6">
+      <div className="flex-1 min-w-0 flex justify-center items-start overflow-auto py-12 px-6 md:ml-[353px]">
         <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
           {/* Back to List */}
           <Link
@@ -232,13 +229,17 @@ function InfoPageContent() {
                 id="companyName"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
+                onBlur={() => markTouched('companyName')}
                 className="h-11"
                 style={{
-                  borderColor: '#0E519B',
                   borderRadius: '7px',
                   fontSize: '16px',
+                  borderColor: touched.companyName && !companyName.trim() ? '#DC2626' : undefined,
                 }}
               />
+              {touched.companyName && !companyName.trim() && (
+                <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+              )}
             </div>
 
             {/* Your Information heading */}
@@ -282,9 +283,13 @@ function InfoPageContent() {
                     id="firstName"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
+                    onBlur={() => markTouched('firstName')}
                     className="h-11"
-                    style={{ borderColor: '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
+                    style={{ borderColor: touched.firstName && !firstName.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
                   />
+                  {touched.firstName && !firstName.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
                 <div>
                   <Label
@@ -302,9 +307,13 @@ function InfoPageContent() {
                     id="lastName"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
+                    onBlur={() => markTouched('lastName')}
                     className="h-11"
-                    style={{ borderColor: '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
+                    style={{ borderColor: touched.lastName && !lastName.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
                   />
+                  {touched.lastName && !lastName.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
                 <div>
                   <Label
@@ -322,9 +331,13 @@ function InfoPageContent() {
                     id="designation"
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
+                    onBlur={() => markTouched('designation')}
                     className="h-11"
-                    style={{ borderColor: '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
+                    style={{ borderColor: touched.designation && !designation.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
                   />
+                  {touched.designation && !designation.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
                 <div>
                   <Label
@@ -338,44 +351,16 @@ function InfoPageContent() {
                   >
                     Phone number with Country Code <span>*</span>
                   </Label>
-                  <div
-                    className="flex items-center"
-                    style={{
-                      border: '1px solid #D7D7D7',
-                      borderRadius: '7px',
-                      height: '44px',
-                      paddingLeft: '10px',
-                    }}
-                  >
-                    <span
-                      className="flex items-center gap-1 pr-2"
-                      style={{ borderRight: '1px solid #D7D7D7', height: '100%' }}
-                    >
-                      <span style={{ fontSize: '18px' }}>🇺🇸</span>
-                      <span style={{ fontSize: '12px', color: '#66717D' }}>▼</span>
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '16px',
-                        color: '#102C4A',
-                        padding: '0 8px',
-                      }}
-                    >
-                      +01
-                    </span>
-                    <input
+                  <div onBlur={() => markTouched('phone')}>
+                    <PhoneInput
                       id="phone"
                       value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="99999 99999*"
-                      className="flex-1 outline-none bg-transparent"
-                      style={{
-                        fontSize: '16px',
-                        color: '#102C4A',
-                        height: '100%',
-                      }}
+                      onChange={setPhone}
                     />
                   </div>
+                  {touched.phone && !phone.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -418,9 +403,16 @@ function InfoPageContent() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => markTouched('email')}
                   className="h-11"
-                  style={{ borderColor: '#0E519B', borderRadius: '7px', fontSize: '16px' }}
+                  style={{ borderColor: touched.email && (!email.trim() || !emailValid) ? '#DC2626' : '#0E519B', borderRadius: '7px', fontSize: '16px' }}
                 />
+                {touched.email && !email.trim() && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                )}
+                {touched.email && email.trim() && !emailValid && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>Please enter a valid email address</p>
+                )}
               </div>
 
               {/* Passwords */}
@@ -443,9 +435,10 @@ function InfoPageContent() {
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onBlur={() => markTouched('password')}
                       className="h-11 pr-10"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.password && !password.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
@@ -463,6 +456,9 @@ function InfoPageContent() {
                       )}
                     </button>
                   </div>
+                  {touched.password && !password.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
                 <div>
                   <Label
@@ -482,9 +478,10 @@ function InfoPageContent() {
                       type={showRePassword ? 'text' : 'password'}
                       value={rePassword}
                       onChange={(e) => setRePassword(e.target.value)}
+                      onBlur={() => markTouched('rePassword')}
                       className="h-11 pr-10"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.rePassword && !rePassword.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
@@ -502,21 +499,26 @@ function InfoPageContent() {
                       )}
                     </button>
                   </div>
+                  {touched.rePassword && !rePassword.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
+                  {touched.rePassword && rePassword.trim() && password !== rePassword && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>Passwords do not match</p>
+                  )}
                 </div>
               </div>
 
               {/* Password Strength */}
               <div style={{ marginTop: '24px' }}>
                 <div
-                  className="flex items-center justify-between"
-                  style={{ paddingBottom: '8px' }}
+                  className="flex items-center justify-between flex-nowrap"
+                  style={{ paddingBottom: '8px', whiteSpace: 'nowrap', borderBottom: `2px solid ${strengthColor}` }}
                 >
                   <span
                     className="font-semibold"
                     style={{
                       color: '#102C4A',
                       fontSize: '16px',
-                      borderBottom: `2px solid ${strengthColor}`,
                       paddingBottom: '6px',
                     }}
                   >
@@ -524,7 +526,7 @@ function InfoPageContent() {
                   </span>
                   <span
                     className="font-semibold"
-                    style={{ color: strengthColor, fontSize: '16px' }}
+                    style={{ color: strengthColor, fontSize: '16px', paddingBottom: '6px' }}
                   >
                     {strengthLabel} ({passwordScore}/5)
                   </span>
@@ -590,35 +592,7 @@ function InfoPageContent() {
             </div>
           </div>
 
-          {/* Footer (outside the card) */}
-          <div style={{ marginTop: '32px' }}>
-            <div className="flex justify-between items-start">
-              <div
-                className="flex flex-col gap-2"
-                style={{ color: '#66717D', fontSize: '14px' }}
-              >
-                <a
-                  href="mailto:info@reservefundadvisory.com"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>@</span> info@reservefundadvisory.com
-                </a>
-                <a
-                  href="tel:727-788-4800"
-                  className="flex items-center gap-2 hover:opacity-80"
-                >
-                  <span>☎</span> 727-788-4800
-                </a>
-              </div>
-              <div
-                className="flex flex-col items-end gap-2"
-                style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
-              >
-                <a href="/privacy">Privacy Policy</a>
-                <span>Copyright2026 @ reservefundadvisory.com</span>
-              </div>
-            </div>
-          </div>
+          <PageFooter />
         </div>
       </div>
     </div>

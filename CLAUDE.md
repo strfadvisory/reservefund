@@ -2,7 +2,7 @@
 
 ## Colors
 - **Text Default Colour:** `#102C4A`
-- **Link Colour:** `#0E519B`
+- **Link (`<a>`) Colour:** Always inherit from parent (no fixed link color)
 - **Secondary Text Colour:** `#66717D`
 - **Border Colour:** `#D7D7D7`
 - **Form Outline:** `#D7D7D7`

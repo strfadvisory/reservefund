@@ -55,6 +55,8 @@ export default function DashboardPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
   const [uploadOpen, setUploadOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [activeGuide, setActiveGuide] = useState<
@@ -117,10 +119,11 @@ export default function DashboardPage() {
     setFirstName('');
     setLastName('');
     setEmail('');
+    setTouched({});
   };
 
   return (
-    <div className="min-h-screen" style={{ background: '#F6F7F9' }}>
+    <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
       <DashboardHeader role="Super Admin" />
 
       {/* Hero section */}
@@ -297,27 +300,17 @@ export default function DashboardPage() {
                     position: 'relative',
                     borderRadius: '10px',
                     overflow: 'hidden',
-                    background: '#F4F7FB',
                     aspectRatio: '16 / 10',
                     border: '1px solid #E5E7EB',
                   }}
                 >
-                  <div
+                  <img
+                    src="/images/thumb.png"
+                    alt={guide.title}
                     style={{
-                      position: 'absolute',
-                      inset: 0,
-                      backgroundImage:
-                        'linear-gradient(to top, rgba(16,185,129,0.15), rgba(16,185,129,0.05)), repeating-linear-gradient(90deg, transparent 0 28px, rgba(16,185,129,0.35) 28px 40px)',
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '22px',
-                      background: '#0E519B',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
                     }}
                   />
                   <div
@@ -773,13 +766,17 @@ export default function DashboardPage() {
                       id="firstName"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      onBlur={() => markTouched('firstName')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.firstName && !firstName.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.firstName && !firstName.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                   <div>
                     <Label
@@ -797,13 +794,17 @@ export default function DashboardPage() {
                       id="lastName"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
+                      onBlur={() => markTouched('lastName')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.lastName && !lastName.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.lastName && !lastName.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                 </div>
 

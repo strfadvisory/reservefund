@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
 import {
   Select,
   SelectContent,
@@ -80,6 +81,8 @@ export default function ProfilePage() {
   const [city, setCity] = useState('');
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
   const [brandingOpen, setBrandingOpen] = useState(false);
   const [branding, setBranding] = useState<'default' | 'customs'>('customs');
   const [mounted, setMounted] = useState(false);
@@ -129,31 +132,10 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-white flex">
-      {/* Sidebar - fixed width, always on the left */}
-      <aside
-        className="relative shrink-0 hidden md:block"
-        style={{
-          width: '353px',
-          backgroundImage: "url('/images/leftbg.png')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat',
-        }}
-      >
-        <div style={{ paddingTop: '40px', paddingLeft: '40px' }}>
-          <Image
-            src="/images/logo.png"
-            alt="Reserve Fund Advisers LLC"
-            width={200}
-            height={56}
-            priority
-            style={{ height: 'auto', width: '200px' }}
-          />
-        </div>
-      </aside>
+      <LeftPanel />
 
       {/* Main Content - fills remaining width */}
-      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative">
+      <div className="flex-1 min-w-0 flex flex-col overflow-auto relative md:ml-[353px]">
         {/* Top-right user/logout */}
         <div
           className="absolute flex flex-col items-center"
@@ -234,13 +216,17 @@ export default function ProfilePage() {
                     id="companyName"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
+                    onBlur={() => markTouched('companyName')}
                     className="h-11"
                     style={{
-                      borderColor: '#0E519B',
+                      borderColor: touched.companyName && !companyName.trim() ? '#DC2626' : '#0E519B',
                       borderRadius: '7px',
                       fontSize: '16px',
                     }}
                   />
+                  {touched.companyName && !companyName.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2" style={{ gap: '20px' }}>
@@ -334,13 +320,17 @@ export default function ProfilePage() {
                       id="zip"
                       value={zipCode}
                       onChange={(e) => setZipCode(e.target.value)}
+                      onBlur={() => markTouched('zipCode')}
                       className="h-11"
                       style={{
-                        borderColor: '#D7D7D7',
+                        borderColor: touched.zipCode && !zipCode.trim() ? '#DC2626' : '#D7D7D7',
                         borderRadius: '7px',
                         fontSize: '16px',
                       }}
                     />
+                    {touched.zipCode && !zipCode.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                   <div>
                     <Label
@@ -354,16 +344,16 @@ export default function ProfilePage() {
                     >
                       State<span>*</span>
                     </Label>
-                    <Select value={state} onValueChange={setState}>
+                    <Select value={state} onValueChange={setState} onOpenChange={(open) => { if (!open) markTouched('state'); }}>
                       <SelectTrigger
                         id="state"
                         className="w-full"
                         style={{
                           height: '44px',
-                          borderColor: '#D7D7D7',
+                          borderColor: touched.state && !state.trim() ? '#DC2626' : '#D7D7D7',
                           borderRadius: '7px',
                           fontSize: '16px',
-                                 padding: '0 16px',
+                          padding: '0 16px',
                         }}
                       >
                         <SelectValue placeholder="" />
@@ -376,6 +366,9 @@ export default function ProfilePage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {touched.state && !state.trim() && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
                   </div>
                 </div>
 
@@ -395,13 +388,17 @@ export default function ProfilePage() {
                     id="city"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
+                    onBlur={() => markTouched('city')}
                     className="h-11"
                     style={{
-                      borderColor: '#D7D7D7',
+                      borderColor: touched.city && !city.trim() ? '#DC2626' : '#D7D7D7',
                       borderRadius: '7px',
                       fontSize: '16px',
                     }}
                   />
+                  {touched.city && !city.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '20px' }}>
@@ -420,14 +417,18 @@ export default function ProfilePage() {
                     id="address1"
                     value={address1}
                     onChange={(e) => setAddress1(e.target.value)}
+                    onBlur={() => markTouched('address1')}
                     rows={3}
                     style={{
-                      borderColor: '#D7D7D7',
+                      borderColor: touched.address1 && !address1.trim() ? '#DC2626' : '#D7D7D7',
                       borderRadius: '7px',
                       fontSize: '16px',
                       resize: 'none',
                     }}
                   />
+                  {touched.address1 && !address1.trim() && (
+                    <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
@@ -491,41 +492,13 @@ export default function ProfilePage() {
                     border: 'none',
                     cursor: 'pointer',
                   }}
-                >
-                  Skip for now
+                > 
+      &nbsp; 
                 </button>
               </div>
             </div>
 
-            {/* Footer (outside the card) */}
-            <div style={{ marginTop: '32px' }}>
-              <div className="flex justify-between items-start">
-                <div
-                  className="flex flex-col gap-2"
-                  style={{ color: '#66717D', fontSize: '14px' }}
-                >
-                  <a
-                    href="mailto:info@reservefundadvisory.com"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>@</span> info@reservefundadvisory.com
-                  </a>
-                  <a
-                    href="tel:727-788-4800"
-                    className="flex items-center gap-2 hover:opacity-80"
-                  >
-                    <span>☎</span> 727-788-4800
-                  </a>
-                </div>
-                <div
-                  className="flex flex-col items-end gap-2"
-                  style={{ color: '#66717D', fontSize: '14px', textAlign: 'right' }}
-                >
-                  <Link href="/privacy">Privacy Policy</Link>
-                  <span>Copyright2026 @ reservefundadvisory.com</span>
-                </div>
-              </div>
-            </div>
+            <PageFooter />
           </div>
         </div>
       </div>
