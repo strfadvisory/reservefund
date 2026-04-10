@@ -14,16 +14,25 @@ const PROPERTY_MANAGERS = [
   { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
   { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
   { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
+    { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
+  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
+  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
 ];
 
 const ASSOCIATIONS = [
   { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Pending' },
   { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
   { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
+    { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Pending' },
+  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
+  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
 ];
 
 const RESERVE_STUDIES = [
   { name: 'Caldron Reserve Study', sub: 'Associations name' },
+  { name: 'Caldron Reserve Study', sub: 'Associations name' },
+  { name: 'Caldron Reserve Study', sub: 'Associations name' },
+    { name: 'Caldron Reserve Study', sub: 'Associations name' },
   { name: 'Caldron Reserve Study', sub: 'Associations name' },
   { name: 'Caldron Reserve Study', sub: 'Associations name' },
 ];
@@ -171,13 +180,14 @@ export default function DashboardPage() {
             boxShadow: '0 4px 20px rgba(16, 44, 74, 0.06)',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr 1fr 1fr',
+            alignItems: 'stretch',
           }}
         >
           {/* Column 1: Company */}
           <div
             style={{
               padding: '28px 28px 28px 32px',
-              borderRight: '1px solid #E5E7EB',
+              borderRight: '1px solid #D7D7D7',
               display: 'flex',
               flexDirection: 'column',
             }}
@@ -986,7 +996,7 @@ function ListColumn({
     <div
       style={{
         padding: '28px 28px',
-        borderRight: noBorder ? 'none' : '1px solid #E5E7EB',
+        borderRight: noBorder ? 'none' : '1px solid #D7D7D7',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -996,12 +1006,18 @@ function ListColumn({
           color: '#102C4A',
           fontSize: '16px',
           fontWeight: 600,
+          paddingBottom: '16px',
           marginBottom: '20px',
+          borderBottom: '1px solid #D7D7D7',
+          marginLeft: '-28px',
+          marginRight: '-28px',
+          paddingLeft: '28px',
+          paddingRight: '28px',
         }}
       >
         {title}
       </h3>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '200px', scrollbarWidth: 'thin', scrollbarColor: '#D7D7D7 transparent' }} className="thin-scrollbar">
         {items.map((item, idx) => (
           <div key={idx} className="flex items-start justify-between" style={{ gap: '12px' }}>
             <div style={{ minWidth: 0, flex: 1 }}>

@@ -239,3 +239,21 @@
   @apply text-base font-normal text-text-secondary;
 }
 
+
+/* Thin Scrollbar Styles */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: #D7D7D7;
+  border-radius: 3px;
+}
+
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #B5BCC4;
+}
