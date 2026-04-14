@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { Play, Search, UserPlus, X } from 'lucide-react';
+import { FolderPlus, Play, Search, Upload, UserCircle2, UserPlus, X } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { TabSwitcher } from '@/components/tab-switcher';
@@ -142,26 +142,82 @@ export default function DashboardPage() {
         className="flex justify-center"
         style={{
           background: 'linear-gradient(270deg, #083464 0%, #0E519B 100%)',
-          paddingTop: '32px',
+          paddingTop: '28px',
           paddingBottom: '120px',
         }}
       >
         <div
+          className="flex items-start justify-between"
           style={{
             width: '100%',
             maxWidth: '1242px',
+            gap: '20px',
           }}
         >
-          <h1
-            style={{
-              color: '#FFFFFF',
-              fontSize: '24px',
-              fontWeight: 600,
-              marginBottom: '24px',
-            }}
-          >
-            Welcome back, Atul singh
-          </h1>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1
+              style={{
+                color: '#FFFFFF',
+                fontSize: '24px',
+                fontWeight: 600,
+                marginBottom: '6px',
+              }}
+            >
+              Welcome back, Atul singh
+            </h1>
+            <p
+              style={{
+                color: 'rgba(255,255,255,0.75)',
+                fontSize: '14px',
+                margin: 0,
+              }}
+            >
+              Apex Global Management Solutions, 450 Park Avenue, 12th Floor, New York, NY 10022, USA
+            </p>
+          </div>
+          <div className="flex items-center">
+            {[
+              { value: '20', label: 'Associations' },
+              { value: '20', label: 'Members' },
+              { value: '04', label: 'Study Data' },
+              { value: '23', label: 'Versions' },
+            ].map((stat, idx, arr) => (
+              <div
+                key={stat.label}
+                className="flex flex-col justify-end"
+                style={{
+                  padding: '0 24px',
+                  borderRight:
+                    idx === arr.length - 1
+                      ? 'none'
+                      : '1px solid rgba(255,255,255,0.25)',
+                  gap: '4px',
+                  minHeight: '44px',
+                }}
+              >
+                <div
+                  style={{
+                    color: '#FFFFFF',
+                    fontSize: '22px',
+                    fontWeight: 600,
+                    lineHeight: 1,
+                  }}
+                >
+                  {stat.value}
+                </div>
+                <div
+                  style={{
+                    color: 'rgba(255,255,255,0.85)',
+                    fontSize: '13px',
+                    lineHeight: 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -185,76 +241,101 @@ export default function DashboardPage() {
             alignItems: 'stretch',
           }}
         >
-          {/* Column 1: Company */}
+          {/* Column 1: Role & Responsibility */}
           <div
             style={{
-              padding: '28px 28px 28px 32px',
               borderRight: '1px solid #D7D7D7',
               display: 'flex',
               flexDirection: 'column',
             }}
           >
+            <h3
+              style={{
+                color: '#102C4A',
+                fontSize: '16px',
+                fontWeight: 600,
+                padding: '18px 28px',
+                borderBottom: '1px solid #D7D7D7',
+              }}
+            >
+              Role & Responsibility
+            </h3>
             <div
               style={{
-                width: '72px',
-                height: '72px',
-                borderRadius: '12px',
-                background:
-                  'conic-gradient(from 45deg, #F59E0B, #EF4444, #EC4899, #8B5CF6, #3B82F6, #10B981, #F59E0B)',
-                marginBottom: '20px',
-              }}
-            />
-            <h2
-              style={{
-                color: '#102C4A',
-                fontSize: '20px',
-                fontWeight: 700,
-                lineHeight: 1.25,
-                marginBottom: '12px',
-              }}
-            >
-              Apex Global
-              <br />
-              Management Solutions
-            </h2>
-            <p
-              style={{
-                color: '#66717D',
-                fontSize: '14px',
-                lineHeight: 1.5,
-                marginBottom: '24px',
+                padding: '24px 28px',
                 flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              450 Park Avenue, 12th Floor, New York, NY 10022, USA
-            </p>
+              <div
+                className="flex items-center justify-center"
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '10px',
+                  background: '#F1F4F9',
+                  marginBottom: '18px',
+                }}
+              >
+                <UserCircle2 className="w-7 h-7" style={{ color: '#66717D' }} />
+              </div>
+              <div
+                style={{
+                  color: '#102C4A',
+                  fontSize: '16px',
+                  fontWeight: 600,
+                  marginBottom: '8px',
+                }}
+              >
+                Super Admin
+              </div>
+              <p
+                style={{
+                  color: '#66717D',
+                  fontSize: '14px',
+                  lineHeight: 1.5,
+                  margin: 0,
+                  flex: 1,
+                }}
+              >
+                You can manage associations, members and study data behalf of your company
+              </p>
+            </div>
             <button
               type="button"
+              className="flex items-center justify-center"
               style={{
-                alignSelf: 'flex-start',
-                padding: '10px 20px',
-                border: '1px solid #D7D7D7',
+                gap: '10px',
+                padding: '16px',
+                borderTop: '1px solid #D7D7D7',
                 background: '#fff',
-                borderRadius: '7px',
                 color: '#102C4A',
-                fontSize: '14px',
+                fontSize: '15px',
                 fontWeight: 500,
                 cursor: 'pointer',
+                border: 'none',
+                borderTopWidth: '1px',
+                borderTopStyle: 'solid',
+                borderTopColor: '#D7D7D7',
               }}
+              onClick={() => router.push('/profile')}
             >
-              Edit Details
+              <UserCircle2 className="w-5 h-5" style={{ color: '#66717D' }} />
+              My Profile
             </button>
           </div>
 
-          {/* Column 2: Property Managers */}
+          {/* Column 2: Reserve Specialist */}
           <ListColumn
-            title="Property Managers"
+            title="Reserve Specialist"
             items={PROPERTY_MANAGERS.map((pm) => ({
               primary: pm.name,
               secondary: pm.email,
               status: pm.status,
             }))}
-            cta="+ Invite New"
+            cta="Invite New"
+            ctaIcon={<UserPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
             onCtaClick={() => setInviteOpen(true)}
           />
 
@@ -266,7 +347,8 @@ export default function DashboardPage() {
               secondary: a.sub,
               status: a.status,
             }))}
-            cta="+ Add Associations"
+            cta="Add Associations"
+            ctaIcon={<FolderPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
             onCtaClick={() => router.push('/associations')}
           />
 
@@ -277,7 +359,8 @@ export default function DashboardPage() {
               primary: r.name,
               secondary: r.sub,
             }))}
-            cta="+ Upload Reserver Study"
+            cta="Upload Reserver Study"
+            ctaIcon={<Upload className="w-5 h-5" style={{ color: '#66717D' }} />}
             noBorder
             onCtaClick={() => setUploadOpen(true)}
           />
@@ -963,19 +1046,20 @@ function ListColumn({
   title,
   items,
   cta,
+  ctaIcon,
   noBorder,
   onCtaClick,
 }: {
   title: string;
   items: { primary: string; secondary: string; status?: string }[];
   cta: string;
+  ctaIcon?: React.ReactNode;
   noBorder?: boolean;
   onCtaClick?: () => void;
 }) {
   return (
     <div
       style={{
-        padding: '18px 28px',
         borderRight: noBorder ? 'none' : '1px solid #D7D7D7',
         display: 'flex',
         flexDirection: 'column',
@@ -986,27 +1070,36 @@ function ListColumn({
           color: '#102C4A',
           fontSize: '16px',
           fontWeight: 600,
-          paddingBottom: '16px',
-          marginBottom: '20px',
+          padding: '18px 28px',
           borderBottom: '1px solid #D7D7D7',
-          marginLeft: '-28px',
-          marginRight: '-28px',
-          paddingLeft: '28px',
-          paddingRight: '28px',
+          margin: 0,
         }}
       >
         {title}
       </h3>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '200px', scrollbarWidth: 'thin', scrollbarColor: '#D7D7D7 transparent' }} className="thin-scrollbar">
+      <div
+        className="thin-scrollbar"
+        style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
+          padding: '20px 28px',
+          overflowY: 'auto',
+          maxHeight: '240px',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#D7D7D7 transparent',
+        }}
+      >
         {items.map((item, idx) => (
           <div key={idx} className="flex items-start justify-between" style={{ gap: '12px' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
                   color: '#102C4A',
-                  fontSize: '16px',
+                  fontSize: '15px',
                   fontWeight: 500,
-                  marginBottom: '4px',
+                  marginBottom: '2px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -1017,7 +1110,7 @@ function ListColumn({
               <div
                 style={{
                   color: '#66717D',
-                  fontSize: '16px',
+                  fontSize: '14px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -1029,7 +1122,7 @@ function ListColumn({
             {item.status && (
               <span
                 style={{
-                  color: item.status === 'Active' ? '#12B76A' : '#66717D',
+                  color: item.status === 'Active' ? '#12B76A' : '#98A2B3',
                   fontSize: '13px',
                   fontWeight: 500,
                   flexShrink: 0,
@@ -1044,19 +1137,23 @@ function ListColumn({
       <button
         type="button"
         onClick={onCtaClick}
+        className="flex items-center justify-center"
         style={{
-          marginTop: '24px',
-          alignSelf: 'flex-start',
-          padding: '10px 20px',
-          border: '1px solid #D7D7D7',
+          gap: '10px',
+          padding: '16px',
+          borderTop: '1px solid #D7D7D7',
           background: '#fff',
-          borderRadius: '7px',
           color: '#102C4A',
-          fontSize: '14px',
+          fontSize: '15px',
           fontWeight: 500,
           cursor: 'pointer',
+          border: 'none',
+          borderTopWidth: '1px',
+          borderTopStyle: 'solid',
+          borderTopColor: '#D7D7D7',
         }}
       >
+        {ctaIcon}
         {cta}
       </button>
     </div>

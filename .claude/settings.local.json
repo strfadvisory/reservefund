@@ -6,7 +6,8 @@
       "Bash(grep:*)",
       "Bash(cat:*)",
       "Bash(rm:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

@@ -7,31 +7,35 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { AssociationDetail } from '@/components/association-detail';
 import { Input } from '@/components/ui/input';
 
-type Association = {
-  id: string;
-  name: string;
-  address: string;
-};
-
-const ASSOCIATIONS: Association[] = [
-  { id: '1', name: 'American Medical Association', address: '330 N Wabash Ave, Chicago, IL 60611, USA' },
-  { id: '2', name: 'American Bar Association', address: '321 N Clark St, Chicago, IL 60654, USA' },
-  { id: '3', name: 'National Association of Realtors', address: '130 N Michigan Ave, Chicago, IL 60611, USA' },
-  { id: '4', name: 'American Nurses Association', address: '8515 Georgia Ave, Silver Spring, MD 20910, USA' },
-  { id: '5', name: 'American Psychological Association', address: '750 First St NE, Washington, DC 20002, USA' },
-  { id: '6', name: 'American Marketing Association', address: 'D30 E Randolph St, Chicago, IL 60601, USA' },
-  { id: '7', name: 'National Education Association', address: '1201 16th St NW, Washington, DC 20036, USA' },
-  { id: '8', name: 'American Institute of Architects', address: '5735 New York Ave NW, Washington, DC 20006, USA' },
-  { id: '9', name: 'American Public Health Association', address: '500 I St NW, Washington, DC 20001, USA' },
-  { id: '10', name: 'American Society of Civil Engineers', address: '5801 Alexander Bell Dr, Reston, VA 20191, USA' },
+const FAQS = [
+  'What is a reserve fund?',
+  'Why is a reserve fund important for long-term planning?',
+  'What is a reserve fund study?',
+  'How often should a reserve study be updated?',
+  'What is included in a reserve fund study?',
+  'How is the reserve fund calculated?',
+  'What is the difference between a reserve fund and an operating fund?',
+  'How much money should be in a reserve fund?',
+  'Who manages the reserve fund?',
+  'What happens if the reserve fund is underfunded?',
+  'How are reserve fund contributions determined?',
+  'Can reserve funds be used for emergency expenses?',
+  'What types of assets are covered in a reserve study?',
+  'How does a reserve study help with budgeting?',
+  'What is a reserve fund forecast?',
+  'How do inflation and market changes affect reserve funds?',
+  'Can reserve funds reduce unexpected costs?',
+  'What are the risks of not having a reserve fund?',
 ];
 
-export default function AssociationsPage() {
-  const [activeId, setActiveId] = useState('2');
+export default function MyAssociationPage() {
   const [query, setQuery] = useState('');
+  const [activeFaq, setActiveFaq] = useState(
+    'What is included in a reserve fund study?',
+  );
 
-  const filtered = ASSOCIATIONS.filter((a) =>
-    a.name.toLowerCase().includes(query.toLowerCase()),
+  const filtered = FAQS.filter((f) =>
+    f.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
@@ -51,12 +55,15 @@ export default function AssociationsPage() {
           className="flex items-center justify-between"
           style={{ width: '100%', maxWidth: '1242px', padding: '0 24px' }}
         >
-          <h1 style={{ color: '#FFFFFF', fontSize: '22px', margin: 0 }}>
-            <span style={{ fontWeight: 600 }}>{ASSOCIATIONS.length}</span>{' '}
-            <span style={{ fontWeight: 600 }}>Associations</span>{' '}
-            <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.85)' }}>
-              Founded
-            </span>
+          <h1
+            style={{
+              color: '#FFFFFF',
+              fontSize: '22px',
+              fontWeight: 500,
+              margin: 0,
+            }}
+          >
+            My Association
           </h1>
           <Link
             href="/add-association"
@@ -100,7 +107,7 @@ export default function AssociationsPage() {
             minHeight: '720px',
           }}
         >
-          {/* Left column: search + list */}
+          {/* Left: FAQ list */}
           <aside style={{ borderRight: '1px solid #D7D7D7', padding: '20px' }}>
             <div style={{ position: 'relative', marginBottom: '18px' }}>
               <Search
@@ -114,7 +121,7 @@ export default function AssociationsPage() {
                 }}
               />
               <Input
-                placeholder="Search by name"
+                placeholder="Find Question"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 className="h-11"
@@ -127,59 +134,48 @@ export default function AssociationsPage() {
                 }}
               />
             </div>
-            <div
+            <ul
               style={{
+                listStyle: 'disc',
+                margin: 0,
+                paddingLeft: '20px',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                gap: '14px',
                 maxHeight: '780px',
                 overflowY: 'auto',
+                color: '#66717D',
               }}
               className="thin-scrollbar"
             >
-              {filtered.map((assoc) => {
-                const active = assoc.id === activeId;
+              {filtered.map((q) => {
+                const active = q === activeFaq;
                 return (
-                  <button
-                    key={assoc.id}
-                    type="button"
-                    onClick={() => setActiveId(assoc.id)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '14px 16px',
-                      borderRadius: '7px',
-                      border: '1px solid #D7D7D7',
-                      background: active ? '#F1F4F9' : '#FFFFFF',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div
+                  <li key={q} style={{ lineHeight: 1.45 }}>
+                    <button
+                      type="button"
+                      onClick={() => setActiveFaq(q)}
                       style={{
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
                         color: '#102C4A',
                         fontSize: '15px',
-                        fontWeight: 600,
-                        marginBottom: '4px',
-                        lineHeight: 1.35,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        textDecoration: active ? 'underline' : 'none',
+                        fontWeight: active ? 500 : 400,
                       }}
                     >
-                      {assoc.name}
-                    </div>
-                    <div
-                      style={{
-                        color: '#66717D',
-                        fontSize: '13px',
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      {assoc.address}
-                    </div>
-                  </button>
+                      {q}
+                    </button>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           </aside>
 
-          {/* Right column: association detail */}
+          {/* Right: association detail */}
           <section style={{ padding: '20px 24px 28px' }}>
             <AssociationDetail
               name="American Bar Association"
@@ -191,4 +187,3 @@ export default function AssociationsPage() {
     </div>
   );
 }
-

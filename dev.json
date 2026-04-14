@@ -1,0 +1,158 @@
+{
+  "pages": [
+    {
+      "title": "Login",
+      "path": "/login",
+      "description": "User sign-in screen with email and password.",
+      "category": "Auth",
+      "status": "Ready"
+    },
+    {
+      "title": "Register",
+      "path": "/register",
+      "description": "Account creation flow for new users.",
+      "category": "Auth",
+      "status": "Ready"
+    },
+    {
+      "title": "OTP Verification",
+      "path": "/otp",
+      "description": "One-time passcode verification step.",
+      "category": "Auth",
+      "status": "Ready"
+    },
+    {
+      "title": "Forgot Password",
+      "path": "/forgetpassword",
+      "description": "Password recovery request screen.",
+      "category": "Auth",
+      "status": "Ready"
+    },
+    {
+      "title": "Dashboard",
+      "path": "/dashboard",
+      "description": "Main dashboard with summary, managers, associations, and reserve studies.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Profile",
+      "path": "/profile",
+      "description": "View and edit your user profile.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Associations",
+      "path": "/associations",
+      "description": "All associations list with detail panel (multiple-association view).",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "My Association",
+      "path": "/my-association",
+      "description": "Single association view with FAQ sidebar.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Add Association",
+      "path": "/add-association",
+      "description": "Four-step wizard (profile, invite, upload, publish) for creating a new association.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "New Association (legacy)",
+      "path": "/associations/new",
+      "description": "Legacy single-form wizard for creating an association.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Reserve Study",
+      "path": "/study",
+      "description": "Reserve study detail view.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Upload Reserve Study",
+      "path": "/uploadreservestudy",
+      "description": "Upload a new reserve study document.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "User Manager",
+      "path": "/user-manager",
+      "description": "All users with search, detail panel (identity, address, meta strip) and activity feed.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Invite Member",
+      "path": "/invitemember",
+      "description": "Invite a new member to collaborate.",
+      "category": "App",
+      "status": "Ready"
+    },
+    {
+      "title": "Upload Logo Popup",
+      "path": "/popup/upload-logo",
+      "description": "Drag-drop brand logo uploader (JPG/PNG, max 2 MB) with preview and Apply.",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Upload Reserve Study Popup",
+      "path": "/popup/upload-reserve-study",
+      "description": "Form-based popup to attach a reserve study document to an association.",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Invite Intro Popup",
+      "path": "/dashboard#invite-intro",
+      "description": "Onboarding popup explaining how to invite property managers (shown on first dashboard visit).",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Invite Property Manager Popup",
+      "path": "/dashboard#invite-manager",
+      "description": "Form popup to invite a property manager by name and email.",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Choose Next Step Popup",
+      "path": "/dashboard#choose-next-step",
+      "description": "Company switcher popup listing associations — triggered from the header dropdown.",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Watch Guide Video Popup",
+      "path": "/dashboard#watch-guide",
+      "description": "Inline video player popup for the Watch Guide cards on the dashboard.",
+      "category": "Popup",
+      "status": "Ready"
+    },
+    {
+      "title": "Info",
+      "path": "/info",
+      "description": "Generic info page.",
+      "category": "Dynamic",
+      "status": "Ready"
+    },
+    {
+      "title": "Posts",
+      "path": "/posts",
+      "description": "Posts listing page.",
+      "category": "Dynamic",
+      "status": "Ready"
+    }
+  ]
+}

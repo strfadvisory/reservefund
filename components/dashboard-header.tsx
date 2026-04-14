@@ -13,7 +13,8 @@ const NEXT_STEP_ITEMS = Array.from({ length: 6 }).map(() => ({
 
 const NAV_ITEMS: { label: string; href: string; match: string[] }[] = [
   { label: 'Dashboard', href: '/dashboard', match: ['/dashboard', '/study'] },
-  { label: 'Associations', href: '/associations', match: ['/associations'] },
+  { label: 'Simulator', href: '/simulator', match: ['/simulator'] },
+  { label: 'Associations', href: '/associations', match: ['/associations', '/my-association'] },
   { label: 'User Manager', href: '/user-manager', match: ['/user-manager'] },
   { label: 'Reserve Studies', href: '/reserve-studies', match: ['/reserve-studies'] },
   { label: 'Learning Center', href: '/learning-center', match: ['/learning-center'] },
