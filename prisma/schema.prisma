@@ -20,3 +20,30 @@ model Post {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model User {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  email          String    @unique
+  companyType    String
+  companyName    String?
+  firstName      String?
+  lastName       String?
+  designation    String?
+  phone          String?
+  passwordHash   String?
+  verified       Boolean   @default(false)
+  otpHash        String?
+  otpExpiresAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  sessions       Session[]
+}
+
+model Session {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  token     String   @unique
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}

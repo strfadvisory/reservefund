@@ -1,0 +1,203 @@
+'use client';
+
+import { Suspense, useEffect, useMemo, useRef, useState, KeyboardEvent, ClipboardEvent } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { PageFooter } from '@/components/page-footer';
+import { LeftPanel } from '@/components/left-panel';
+
+const OTP_LENGTH = 5;
+const RESEND_SECONDS = 30;
+
+function maskEmail(email: string) {
+  if (!email || !email.includes('@')) return email;
+  const [local, domain] = email.split('@');
+  const [domainName, ...rest] = domain.split('.');
+  const maskedLocal = local.length <= 3 ? local + '....' : local.slice(0, 3) + '....';
+  const maskedDomain = domainName.length <= 2 ? domainName + '...' : domainName.slice(0, 2) + '...';
+  return `${maskedLocal}@${maskedDomain}.${rest.join('.') || 'com'}`;
+}
+
+export default function OtpPage() {
+  return (
+    <Suspense fallback={null}>
+      <OtpPageContent />
+    </Suspense>
+  );
+}
+
+function OtpPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get('email') ?? '';
+  const maskedEmail = useMemo(() => maskEmail(email), [email]);
+
+  const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [seconds, setSeconds] = useState(RESEND_SECONDS);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
+
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const id = setInterval(() => setSeconds((s) => s - 1), 1000);
+    return () => clearInterval(id);
+  }, [seconds]);
+
+  useEffect(() => {
+    inputsRef.current[0]?.focus();
+  }, []);
+
+  const canConfirm = digits.every((d) => d !== '') && !submitting;
+
+  const setDigitAt = (index: number, value: string) => {
+    const next = [...digits];
+    next[index] = value;
+    setDigits(next);
+  };
+
+  const handleChange = (index: number, raw: string) => {
+    const value = raw.replace(/\D/g, '').slice(-1);
+    setDigitAt(index, value);
+    if (error) setError('');
+    if (value && index < OTP_LENGTH - 1) inputsRef.current[index + 1]?.focus();
+  };
+
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (digits[index]) setDigitAt(index, '');
+      else if (index > 0) { inputsRef.current[index - 1]?.focus(); setDigitAt(index - 1, ''); }
+    } else if (e.key === 'ArrowLeft' && index > 0) inputsRef.current[index - 1]?.focus();
+    else if (e.key === 'ArrowRight' && index < OTP_LENGTH - 1) inputsRef.current[index + 1]?.focus();
+  };
+
+  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
+    if (!pasted) return;
+    e.preventDefault();
+    const next = Array(OTP_LENGTH).fill('');
+    for (let i = 0; i < pasted.length; i++) next[i] = pasted[i];
+    setDigits(next);
+    const focusIndex = Math.min(pasted.length, OTP_LENGTH - 1);
+    inputsRef.current[focusIndex]?.focus();
+  };
+
+  const handleResend = async () => {
+    setDigits(Array(OTP_LENGTH).fill(''));
+    setError('');
+    try {
+      const res = await fetch('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to resend');
+      setSeconds(RESEND_SECONDS);
+      inputsRef.current[0]?.focus();
+    } catch (e: any) {
+      setError(e.message);
+    }
+  };
+
+  const handleConfirm = async () => {
+    if (!canConfirm) {
+      setError('Please enter a valid OTP');
+      return;
+    }
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: digits.join('') }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+      router.push('/auth/profile');
+    } catch (e: any) {
+      setError(e.message);
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-white flex">
+      <LeftPanel />
+
+      <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6 md:ml-[353px]">
+        <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
+          <div className="bg-white" style={{ border: '1px solid #D7D7D7', borderRadius: '7px' }}>
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
+              <h1 className="font-semibold" style={{ color: '#102C4A', fontSize: '24px', lineHeight: '1.3' }}>OTP Verification</h1>
+            </div>
+
+            <div style={{ padding: '24px 32px' }}>
+              <p style={{ color: '#102C4A', fontSize: '16px', lineHeight: '1.5', marginBottom: '4px' }}>
+                Verify your email address {maskedEmail}
+              </p>
+              <p style={{ color: '#102C4A', fontSize: '16px', lineHeight: '1.5', marginBottom: '24px' }}>
+                Enter the OTP sent to your registered contact to verify and access the system.
+              </p>
+
+              <div className="grid" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px', marginBottom: '16px', width: '100%' }}>
+                {digits.map((d, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => { inputsRef.current[i] = el; }}
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={d}
+                    onChange={(e) => handleChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    onPaste={handlePaste}
+                    className="text-center outline-none transition-colors"
+                    style={{
+                      width: '100%', minWidth: 0, height: '56px', fontSize: '24px', fontWeight: 700, color: '#102C4A',
+                      border: `1px solid ${error && d === '' ? '#DC2626' : d !== '' ? '#0E519B' : '#D7D7D7'}`,
+                      borderRadius: '7px', boxSizing: 'border-box', padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+
+              {error && <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '8px' }}>{error}</p>}
+
+              <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
+                <span className="font-semibold" style={{ color: '#102C4A', fontSize: '16px' }}>{seconds} Second</span>
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={seconds > 0}
+                  style={{
+                    color: seconds > 0 ? '#B5BCC4' : '#0E519B',
+                    fontSize: '16px', fontWeight: 500, background: 'none', border: 'none',
+                    cursor: seconds > 0 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Resend Code
+                </button>
+              </div>
+
+              <button
+                onClick={handleConfirm}
+                disabled={!canConfirm}
+                className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed"
+                style={{ backgroundColor: canConfirm ? '#0E519B' : '#B5BCC4', borderRadius: '7px', padding: '14px', fontSize: '16px' }}
+              >
+                {submitting ? 'Verifying…' : 'Confirm'}
+              </button>
+            </div>
+
+            <div className="text-center" style={{ padding: '20px', borderTop: '1px solid #D7D7D7' }}>
+              <Link href="/auth/register" style={{ color: '#102C4A', fontSize: '16px', fontWeight: 500 }}>Change Profile</Link>
+            </div>
+          </div>
+
+          <PageFooter />
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,1 +1,0 @@
-{"nodes": [{"id": "components_left_panel_tsx", "label": "left-panel.tsx", "file_type": "code", "source_file": "components/left-panel.tsx", "source_location": "L1"}], "edges": [{"source": "components_left_panel_tsx", "target": "image", "relation": "imports_from", "confidence": "EXTRACTED", "source_file": "components/left-panel.tsx", "source_location": "L1", "weight": 1.0}]}
