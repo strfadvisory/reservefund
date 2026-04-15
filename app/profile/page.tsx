@@ -86,6 +86,45 @@ export default function ProfilePage() {
   const [logoOpen, setLogoOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [zipLookup, setZipLookup] = useState(false);
+  const [zipError, setZipError] = useState('');
+
+  useEffect(() => {
+    const code = zipCode.trim();
+    if (code.length < 3) {
+      setZipError('');
+      return;
+    }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      setZipLookup(true);
+      setZipError('');
+      try {
+        const res = await fetch(
+          `/api/geocode?q=${encodeURIComponent(code)}&countrycode=us`,
+          { cache: 'no-store', signal: controller.signal },
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lookup failed');
+        const r = data.result;
+        if (!r) {
+          setZipError('No match for this zip code');
+          return;
+        }
+        if (r.city) setCity(r.city);
+        if (r.state) setState(r.state);
+        if (r.formatted) setAddress1(r.formatted);
+      } catch (e: any) {
+        if (e.name !== 'AbortError') setZipError(e.message || 'Lookup failed');
+      } finally {
+        setZipLookup(false);
+      }
+    }, 500);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [zipCode]);
 
   const canConfirm =
     companyName.trim() !== '' &&
@@ -352,6 +391,12 @@ export default function ProfilePage() {
                     />
                     {touched.zipCode && !zipCode.trim() && (
                       <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                    )}
+                    {zipLookup && (
+                      <p style={{ color: '#66717D', fontSize: '14px', marginTop: '4px' }}>Looking up address…</p>
+                    )}
+                    {!zipLookup && zipError && (
+                      <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>{zipError}</p>
                     )}
                   </div>
                   <div>
