@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { DesignationInput } from '@/components/ui/designation-input';
 import { Label } from '@/components/ui/label';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
@@ -171,8 +172,7 @@ function InfoPageContent() {
                 </div>
                 <div>
                   <Label htmlFor="designation" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>Designation / Role <span>*</span></Label>
-                  <Input id="designation" value={designation} onChange={(e) => setDesignation(e.target.value)} onBlur={() => markTouched('designation')} className="h-11"
-                    style={{ borderColor: touched.designation && !designation.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }} />
+                  <DesignationInput id="designation" value={designation} onChange={setDesignation} onBlur={() => markTouched('designation')} invalid={touched.designation && !designation.trim()} />
                   {touched.designation && !designation.trim() && <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>}
                 </div>
                 <div>

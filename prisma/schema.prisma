@@ -34,9 +34,65 @@ model User {
   verified       Boolean   @default(false)
   otpHash        String?
   otpExpiresAt   DateTime?
+  logoFileId     String?
+  website        String?
+  linkedin       String?
+  zipCode        String?
+  state          String?
+  city           String?
+  address1       String?
+  address2       String?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   sessions       Session[]
+}
+
+model Association {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId             String   @db.ObjectId
+  associationName    String
+  managerFirstName   String?
+  managerLastName    String?
+  managerEmail       String?
+  associationEmail   String?
+  cellPhone          String?
+  telephone          String?
+  zipCode            String?
+  state              String?
+  city               String?
+  address1           String?
+  address2           String?
+  logoFileId         String?
+  published          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+}
+
+model Invite {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  invitedBy  String   @db.ObjectId
+  associationId String? @db.ObjectId
+  firstName  String
+  lastName   String
+  email      String
+  token      String?  @unique
+  status     String   @default("pending")
+  linkedUserId String? @db.ObjectId
+  designation String?
+  permissions Json?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model ReserveStudy {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  associationId String   @db.ObjectId
+  fileName      String
+  fileId        String
+  size          Int
+  contentType   String?
+  createdAt     DateTime @default(now())
 }
 
 model Session {

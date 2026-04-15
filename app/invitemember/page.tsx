@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { User, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DesignationInput } from '@/components/ui/designation-input';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 
@@ -437,17 +438,12 @@ export default function InviteMemberPage() {
                     >
                       Designation/Role <span>*</span>
                     </Label>
-                    <Input
+                    <DesignationInput
                       id="imDesignation"
                       value={designation}
-                      onChange={(e) => setDesignation(e.target.value)}
+                      onChange={setDesignation}
                       onBlur={() => markTouched('designation')}
-                      className="h-11"
-                      style={{
-                        borderColor: touched.designation && !designation.trim() ? '#DC2626' : '#D7D7D7',
-                        borderRadius: '7px',
-                        fontSize: '16px',
-                      }}
+                      invalid={touched.designation && !designation.trim()}
                     />
                     {touched.designation && !designation.trim() && (
                       <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>

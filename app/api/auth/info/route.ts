@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { generateOtp, hashOtp, hashPassword, OTP_TTL_MS } from '@/lib/auth';
+import { sendOtpEmail } from '@/lib/mailer';
 
 export async function POST(request: NextRequest) {
   try {
@@ -50,8 +51,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Dev: log OTP. Replace with email provider later.
-    console.log(`[auth] OTP for ${user.email}: ${otp}`);
+    try {
+      await sendOtpEmail(user.email, otp);
+    } catch (mailErr: any) {
+      console.error('[auth] Failed to send OTP email:', mailErr?.message || mailErr);
+      return NextResponse.json(
+        { error: 'Could not send verification email. Please try again.' },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json({ email: user.email }, { status: 200 });
   } catch (error: any) {

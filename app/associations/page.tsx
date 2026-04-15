@@ -1,37 +1,172 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { AssociationDetail } from '@/components/association-detail';
+import {
+  AssociationDetail,
+  type AssociationDetailMember,
+  type AssociationDetailStudy,
+} from '@/components/association-detail';
 import { Input } from '@/components/ui/input';
 
 type Association = {
   id: string;
-  name: string;
-  address: string;
+  associationName: string;
+  managerFirstName: string | null;
+  managerLastName: string | null;
+  managerEmail: string | null;
+  associationEmail: string | null;
+  cellPhone: string | null;
+  telephone: string | null;
+  zipCode: string | null;
+  state: string | null;
+  city: string | null;
+  address1: string | null;
+  address2: string | null;
+  logoFileId?: string | null;
+  createdAt?: string;
 };
 
-const ASSOCIATIONS: Association[] = [
-  { id: '1', name: 'American Medical Association', address: '330 N Wabash Ave, Chicago, IL 60611, USA' },
-  { id: '2', name: 'American Bar Association', address: '321 N Clark St, Chicago, IL 60654, USA' },
-  { id: '3', name: 'National Association of Realtors', address: '130 N Michigan Ave, Chicago, IL 60611, USA' },
-  { id: '4', name: 'American Nurses Association', address: '8515 Georgia Ave, Silver Spring, MD 20910, USA' },
-  { id: '5', name: 'American Psychological Association', address: '750 First St NE, Washington, DC 20002, USA' },
-  { id: '6', name: 'American Marketing Association', address: 'D30 E Randolph St, Chicago, IL 60601, USA' },
-  { id: '7', name: 'National Education Association', address: '1201 16th St NW, Washington, DC 20036, USA' },
-  { id: '8', name: 'American Institute of Architects', address: '5735 New York Ave NW, Washington, DC 20006, USA' },
-  { id: '9', name: 'American Public Health Association', address: '500 I St NW, Washington, DC 20001, USA' },
-  { id: '10', name: 'American Society of Civil Engineers', address: '5801 Alexander Bell Dr, Reston, VA 20191, USA' },
-];
+type Invite = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation?: string | null;
+  permissions?: Record<string, unknown> | null;
+  status: string;
+  linkedUserId?: string | null;
+};
+
+type ReserveStudy = {
+  id: string;
+  fileName: string;
+  size: number;
+  contentType?: string | null;
+  createdAt: string;
+};
+
+function formatDate(iso?: string): string {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function permissionsSummary(p: unknown): string {
+  if (!p || typeof p !== 'object') return '';
+  const keys = Object.entries(p as Record<string, unknown>)
+    .filter(([, v]) => Boolean(v))
+    .map(([k]) => k);
+  return keys.join(', ');
+}
+
+function composeAddress(a: Association): string {
+  return [a.address1, a.address2, a.city, a.state, a.zipCode]
+    .map((p) => (p ? String(p).trim() : ''))
+    .filter(Boolean)
+    .join(', ');
+}
+
+function composeDetailAddress(a: Association): string {
+  const parts = [
+    composeAddress(a),
+    a.cellPhone,
+    a.telephone,
+    a.associationEmail || a.managerEmail,
+  ]
+    .map((p) => (p ? String(p).trim() : ''))
+    .filter(Boolean);
+  return parts.join(', ');
+}
 
 export default function AssociationsPage() {
-  const [activeId, setActiveId] = useState('2');
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string>('');
   const [query, setQuery] = useState('');
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [studies, setStudies] = useState<ReserveStudy[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-  const filtered = ASSOCIATIONS.filter((a) =>
-    a.name.toLowerCase().includes(query.toLowerCase()),
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/associations', { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled) return;
+        const list: Association[] = data.associations || [];
+        setAssociations(list);
+        if (list.length > 0) setActiveId(list[0].id);
+      } catch {
+        // ignore
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeId) {
+      setInvites([]);
+      setStudies([]);
+      return;
+    }
+    let cancelled = false;
+    setDetailLoading(true);
+    (async () => {
+      try {
+        const [invitesRes, studiesRes] = await Promise.all([
+          fetch(`/api/invite?associationId=${activeId}`, { cache: 'no-store' }),
+          fetch(`/api/reserve-studies?associationId=${activeId}`, {
+            cache: 'no-store',
+          }),
+        ]);
+        const invitesData = await invitesRes.json();
+        const studiesData = await studiesRes.json();
+        if (cancelled) return;
+        setInvites(invitesData.invites || []);
+        setStudies(studiesData.studies || []);
+      } catch {
+        if (!cancelled) {
+          setInvites([]);
+          setStudies([]);
+        }
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId]);
+
+  const filtered = useMemo(
+    () =>
+      associations.filter((a) =>
+        a.associationName.toLowerCase().includes(query.toLowerCase()),
+      ),
+    [associations, query],
+  );
+
+  const active = useMemo(
+    () => associations.find((a) => a.id === activeId) || null,
+    [associations, activeId],
   );
 
   return (
@@ -52,7 +187,7 @@ export default function AssociationsPage() {
           style={{ width: '100%', maxWidth: '1242px', padding: '0 24px' }}
         >
           <h1 style={{ color: '#FFFFFF', fontSize: '22px', margin: 0 }}>
-            <span style={{ fontWeight: 600 }}>{ASSOCIATIONS.length}</span>{' '}
+            <span style={{ fontWeight: 600 }}>{associations.length}</span>{' '}
             <span style={{ fontWeight: 600 }}>Associations</span>{' '}
             <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.85)' }}>
               Founded
@@ -134,61 +269,102 @@ export default function AssociationsPage() {
                 gap: '8px',
                 maxHeight: '780px',
                 overflowY: 'auto',
+                paddingRight: '10px',
               }}
               className="thin-scrollbar"
             >
-              {filtered.map((assoc) => {
-                const active = assoc.id === activeId;
-                return (
-                  <button
-                    key={assoc.id}
-                    type="button"
-                    onClick={() => setActiveId(assoc.id)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '14px 16px',
-                      borderRadius: '7px',
-                      border: '1px solid #D7D7D7',
-                      background: active ? '#F1F4F9' : '#FFFFFF',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div
+              {loading ? (
+                <div style={{ color: '#66717D', fontSize: '14px', padding: '12px 4px' }}>
+                  Loading…
+                </div>
+              ) : filtered.length === 0 ? (
+                <div style={{ color: '#66717D', fontSize: '14px', padding: '12px 4px' }}>
+                  {associations.length === 0
+                    ? 'No associations yet'
+                    : 'No matches'}
+                </div>
+              ) : (
+                filtered.map((assoc) => {
+                  const isActive = assoc.id === activeId;
+                  return (
+                    <button
+                      key={assoc.id}
+                      type="button"
+                      onClick={() => setActiveId(assoc.id)}
                       style={{
-                        color: '#102C4A',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        marginBottom: '4px',
-                        lineHeight: 1.35,
+                        textAlign: 'left',
+                        padding: '14px 16px',
+                        borderRadius: '7px',
+                        border: '1px solid #D7D7D7',
+                        background: isActive ? '#F1F4F9' : '#FFFFFF',
+                        cursor: 'pointer',
                       }}
                     >
-                      {assoc.name}
-                    </div>
-                    <div
-                      style={{
-                        color: '#66717D',
-                        fontSize: '13px',
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      {assoc.address}
-                    </div>
-                  </button>
-                );
-              })}
+                      <div
+                        style={{
+                          color: '#102C4A',
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          marginBottom: '4px',
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {assoc.associationName}
+                      </div>
+                      <div
+                        style={{
+                          color: '#66717D',
+                          fontSize: '13px',
+                          lineHeight: 1.45,
+                        }}
+                      >
+                        {composeAddress(assoc) || '—'}
+                      </div>
+                    </button>
+                  );
+                })
+              )}
             </div>
           </aside>
 
           {/* Right column: association detail */}
           <section style={{ padding: '20px 24px 28px' }}>
-            <AssociationDetail
-              name="American Bar Association"
-              address="330 N Wabash Ave, Chicago, IL 60611, USA, +018483 28293, +018483 28293, info@BarAssociation.com"
-            />
+            {active ? (
+              <AssociationDetail
+                name={active.associationName}
+                address={composeDetailAddress(active)}
+                invitedBy="Myself"
+                invitationDate={formatDate(active.createdAt)}
+                reserveStudyCount={studies.length}
+                loading={detailLoading}
+                members={invites.map<AssociationDetailMember>((inv) => ({
+                  id: inv.id,
+                  name: [inv.firstName, inv.lastName].filter(Boolean).join(' '),
+                  role:
+                    inv.designation ||
+                    permissionsSummary(inv.permissions) ||
+                    (inv.status === 'pending' ? 'Invite pending' : 'Member'),
+                  phone: '',
+                  email: inv.email,
+                  cta: 'Edit',
+                }))}
+                studies={studies.map<AssociationDetailStudy>((s) => ({
+                  id: s.id,
+                  name: s.fileName,
+                  uploader: `Myself. ${formatDate(s.createdAt)}`,
+                  lastModified: formatDate(s.createdAt),
+                  versions: '1 Founded',
+                  status: 'Active',
+                }))}
+              />
+            ) : (
+              <div style={{ color: '#66717D', fontSize: '14px' }}>
+                {loading ? 'Loading…' : 'Select an association to view details'}
+              </div>
+            )}
           </section>
         </div>
       </div>
     </div>
   );
 }
-

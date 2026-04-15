@@ -1,10 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Bell, UserCircle2, ChevronDown } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { Bell, UserCircle2, ChevronDown, LogOut } from 'lucide-react';
+import roleMapJson from '@/config.json';
+
+const roleMap: Record<string, string> = (roleMapJson as any).roles as Record<string, string>;
+
+const companyTypeLabels: Record<string, string> = {
+  management: 'Management Company',
+  bank: 'Bank Office',
+  reserve: 'Reserve Study Company',
+  advisor: 'Investor Advisor',
+  board: 'Board Members',
+  other: 'Other',
+};
 
 const NEXT_STEP_ITEMS = Array.from({ length: 6 }).map(() => ({
   name: 'Apex Global Association Solutions',
@@ -30,13 +42,56 @@ export function DashboardHeader({
   role = 'Super Admin',
 }: DashboardHeaderProps) {
   const pathname = usePathname() || '';
+  const router = useRouter();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(2);
   const [mounted, setMounted] = useState(false);
+  const [logoSrc, setLogoSrc] = useState<string>('/images/clogo.png');
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  const [roleName, setRoleName] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const u = data?.user;
+        if (!u) return;
+        if (u.logoFileId) setLogoSrc(`/api/profile/logo/${u.logoFileId}`);
+        if (u.companyName) setCompanyName(u.companyName);
+        if (u.companyType && companyTypeLabels[u.companyType]) setRoleName(companyTypeLabels[u.companyType]);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, [userMenuOpen]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
+    setUserMenuOpen(false);
+    router.push('/login');
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -67,9 +122,10 @@ export function DashboardHeader({
       {/* Logo + Company */}
       <div className="flex items-center" style={{ gap: '12px' }}>
         <img
-          src="/images/clogo.png"
+          src={logoSrc}
           alt="Logo"
-          style={{ width: '36px', height: '36px', objectFit: 'contain' }}
+          onError={() => setLogoSrc('/images/clogo.png')}
+          style={{ width: '36px', height: '36px', objectFit: 'contain', background: '#fff', borderRadius: '6px' }}
         />
         <button
           type="button"
@@ -88,10 +144,10 @@ export function DashboardHeader({
             className="flex items-center"
             style={{ gap: '6px', color: '#FFFFFF', fontSize: '16px', fontWeight: 600 }}
           >
-            {company}
+            {companyName || company}
             <ChevronDown className="w-4 h-4" style={{ color: '#FFFFFF' }} />
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{role}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{roleName || role}</div>
         </button>
       </div>
 
@@ -142,9 +198,55 @@ export function DashboardHeader({
         <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
           <Bell className="w-6 h-6" style={{ color: '#FFFFFF' }} strokeWidth={1.75} />
         </button>
-        <button type="button" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-          <UserCircle2 className="w-8 h-8" style={{ color: '#FFFFFF' }} strokeWidth={1.5} />
-        </button>
+        <div ref={userMenuRef} style={{ position: 'relative' }}>
+          <button
+            type="button"
+            onClick={() => setUserMenuOpen((v) => !v)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}
+          >
+            <UserCircle2 className="w-8 h-8" style={{ color: '#FFFFFF' }} strokeWidth={1.5} />
+          </button>
+          {userMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                right: 0,
+                minWidth: '180px',
+                background: '#FFFFFF',
+                border: '1px solid #D7D7D7',
+                borderRadius: '7px',
+                boxShadow: '0 10px 30px rgba(16, 44, 74, 0.15)',
+                padding: '6px',
+                zIndex: 60,
+              }}
+            >
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex items-center"
+                style={{
+                  width: '100%',
+                  gap: '10px',
+                  padding: '10px 12px',
+                  background: 'none',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  color: '#102C4A',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textAlign: 'left',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#F4F6F8')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'none')}
+              >
+                <LogOut className="w-4 h-4" style={{ color: '#102C4A' }} />
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
 

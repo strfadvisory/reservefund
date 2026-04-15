@@ -8,7 +8,14 @@
       "Bash(rm:*)",
       "Bash(npx next:*)",
       "Bash(npx tsc:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(npm install:*)",
+      "Bash(awk 'NR<=495 || NR>=743' /Users/anupammac/Documents/atul/reservefund/app/profile/page.tsx)",
+      "Read(//tmp/**)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"add-association: %{http_code}\\\\n\" http://localhost:3000/add-association)",
+      "Bash(curl -s -o /dev/null -w \"api/invite GET: %{http_code}\\\\n\" http://localhost:3000/api/invite)",
+      "Bash(curl *)"
     ]
   }
 }

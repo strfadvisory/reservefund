@@ -2,15 +2,17 @@
 
 import { ImagePlus, MoreHorizontal } from 'lucide-react';
 
-type Member = {
+export type AssociationDetailMember = {
+  id?: string;
   name: string;
   role: string;
   phone: string;
   email: string;
-  cta: 'Edit' | 'You';
+  cta?: 'Edit' | 'You';
 };
 
-type Study = {
+export type AssociationDetailStudy = {
+  id?: string;
   name: string;
   uploader: string;
   lastModified: string;
@@ -18,54 +20,20 @@ type Study = {
   status: 'Active' | 'Inactive';
 };
 
-const MEMBERS: Member[] = [
-  {
-    name: 'Michael Jordan',
-    role: 'Director, Field Manager All Functions',
-    phone: '+018483 28293',
-    email: 'info@BarAssociation.com',
-    cta: 'Edit',
-  },
-  {
-    name: 'Mandra jonson',
-    role: 'Members Management, Reserver Study data ,',
-    phone: '+018483 28293',
-    email: 'info@BarAssociation.com',
-    cta: 'Edit',
-  },
-];
-
-const STUDIES: Study[] = [
-  {
-    name: 'ABA Reserve & Compliance Study',
-    uploader: 'Myself. 20 Jan 2024 8:40 PM',
-    lastModified: '20 Jan 2024 8:40 PM',
-    versions: '3 Founded',
-    status: 'Active',
-  },
-  {
-    name: 'ABA Reserve & Compliance Study',
-    uploader: 'Myself. 20 Jan 2024 8:40 PM',
-    lastModified: '20 Jan 2024 8:40 PM',
-    versions: '3 Founded',
-    status: 'Active',
-  },
-  {
-    name: 'ABA Facility & Capital Reserve Study',
-    uploader: 'Myself. 20 Jan 2024 8:40 PM',
-    lastModified: '20 Jan 2024 8:40 PM',
-    versions: '3 Founded',
-    status: 'Active',
-  },
-];
-
 export type AssociationDetailProps = {
   name: string;
   address: string;
   readOnly?: boolean;
   showBrandingBanner?: boolean;
   placeholderLogo?: boolean;
+  logoUrl?: string | null;
   onBrandingChoice?: (choice: 'yes' | 'no') => void;
+  invitedBy?: string;
+  invitationDate?: string;
+  reserveStudyCount?: number;
+  members?: AssociationDetailMember[];
+  studies?: AssociationDetailStudy[];
+  loading?: boolean;
 };
 
 export function AssociationDetail({
@@ -74,8 +42,18 @@ export function AssociationDetail({
   readOnly = false,
   showBrandingBanner = false,
   placeholderLogo = false,
+  logoUrl = null,
   onBrandingChoice,
+  invitedBy = 'Myself',
+  invitationDate = '—',
+  reserveStudyCount,
+  members = [],
+  studies = [],
+  loading = false,
 }: AssociationDetailProps) {
+  const studyCount =
+    typeof reserveStudyCount === 'number' ? reserveStudyCount : studies.length;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Identity + meta grid card */}
@@ -87,12 +65,25 @@ export function AssociationDetail({
           background: '#FFFFFF',
         }}
       >
-        {/* identity row */}
         <div
           className="flex items-start"
           style={{ padding: '20px 24px', gap: '20px' }}
         >
-          {placeholderLogo ? (
+          {logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={logoUrl}
+              alt={name}
+              style={{
+                width: '72px',
+                height: '72px',
+                borderRadius: '10px',
+                flexShrink: 0,
+                objectFit: 'cover',
+                border: '1px solid #ECEEF1',
+              }}
+            />
+          ) : placeholderLogo ? (
             <div
               className="flex items-center justify-center"
               style={{
@@ -192,7 +183,6 @@ export function AssociationDetail({
             </div>
           </div>
         )}
-        {/* meta strip */}
         <div
           style={{
             display: 'grid',
@@ -201,9 +191,12 @@ export function AssociationDetail({
           }}
         >
           {[
-            { label: 'Invite By', value: 'Myself' },
-            { label: 'Invitation Date', value: '20 Jan 2025 8:40 PM' },
-            { label: 'No. of Reserve Study', value: '3 Founded' },
+            { label: 'Invite By', value: invitedBy },
+            { label: 'Invitation Date', value: invitationDate },
+            {
+              label: 'No. of Reserve Study',
+              value: `${studyCount} Founded`,
+            },
           ].map((item, idx, arr) => (
             <div
               key={item.label}
@@ -250,7 +243,7 @@ export function AssociationDetail({
               margin: 0,
             }}
           >
-            {MEMBERS.length} Members Founded
+            {members.length} Members Founded
           </h3>
           {!readOnly && (
             <button type="button" style={outlineBtn}>
@@ -282,49 +275,62 @@ export function AssociationDetail({
             <span>Contact</span>
             <span />
           </div>
-          {MEMBERS.map((m, idx) => (
+          {members.length === 0 ? (
             <div
-              key={idx}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '1.3fr 1fr auto',
-                alignItems: 'center',
-                padding: '18px 24px',
-                gap: '16px',
-                borderBottom:
-                  idx === MEMBERS.length - 1 ? 'none' : '1px solid #ECEEF1',
+                padding: '24px',
+                color: '#66717D',
+                fontSize: '14px',
+                textAlign: 'center',
               }}
             >
-              <div>
-                <div
-                  style={{
-                    color: '#102C4A',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    marginBottom: '4px',
-                  }}
-                >
-                  {m.name}
-                </div>
-                <div style={{ color: '#66717D', fontSize: '13px' }}>
-                  {m.role}
-                </div>
-              </div>
-              <div>
-                <div style={{ color: '#102C4A', fontSize: '14px' }}>
-                  {m.phone}
-                </div>
-                <div style={{ color: '#66717D', fontSize: '13px' }}>
-                  {m.email}
-                </div>
-              </div>
-              {!readOnly && (
-                <button type="button" style={outlineBtn}>
-                  {m.cta}
-                </button>
-              )}
+              {loading ? 'Loading…' : 'No members yet'}
             </div>
-          ))}
+          ) : (
+            members.map((m, idx) => (
+              <div
+                key={m.id ?? idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1.3fr 1fr auto',
+                  alignItems: 'center',
+                  padding: '18px 24px',
+                  gap: '16px',
+                  borderBottom:
+                    idx === members.length - 1 ? 'none' : '1px solid #ECEEF1',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      color: '#102C4A',
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {m.name}
+                  </div>
+                  <div style={{ color: '#66717D', fontSize: '13px' }}>
+                    {m.role}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ color: '#102C4A', fontSize: '14px' }}>
+                    {m.phone}
+                  </div>
+                  <div style={{ color: '#66717D', fontSize: '13px' }}>
+                    {m.email}
+                  </div>
+                </div>
+                {!readOnly && (
+                  <button type="button" style={outlineBtn}>
+                    {m.cta ?? 'Edit'}
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -376,64 +382,77 @@ export function AssociationDetail({
             <span />
             <span />
           </div>
-          {STUDIES.map((s, idx) => (
+          {studies.length === 0 ? (
             <div
-              key={idx}
               style={{
-                display: 'grid',
-                gridTemplateColumns: '2fr 1.2fr 1fr 0.8fr 32px',
-                alignItems: 'center',
-                padding: '18px 24px',
-                gap: '16px',
-                borderBottom:
-                  idx === STUDIES.length - 1 ? 'none' : '1px solid #ECEEF1',
+                padding: '24px',
+                color: '#66717D',
+                fontSize: '14px',
+                textAlign: 'center',
               }}
             >
-              <div>
-                <div
+              {loading ? 'Loading…' : 'No reserve studies uploaded yet'}
+            </div>
+          ) : (
+            studies.map((s, idx) => (
+              <div
+                key={s.id ?? idx}
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '2fr 1.2fr 1fr 0.8fr 32px',
+                  alignItems: 'center',
+                  padding: '18px 24px',
+                  gap: '16px',
+                  borderBottom:
+                    idx === studies.length - 1 ? 'none' : '1px solid #ECEEF1',
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      color: '#102C4A',
+                      fontSize: '15px',
+                      fontWeight: 500,
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {s.name}
+                  </div>
+                  <div style={{ color: '#66717D', fontSize: '13px' }}>
+                    {s.uploader}
+                  </div>
+                </div>
+                <span style={{ color: '#102C4A', fontSize: '14px' }}>
+                  {s.lastModified}
+                </span>
+                <span style={{ color: '#102C4A', fontSize: '14px' }}>
+                  {s.versions}
+                </span>
+                <span
                   style={{
-                    color: '#102C4A',
-                    fontSize: '15px',
+                    color: s.status === 'Active' ? '#12B76A' : '#66717D',
+                    fontSize: '14px',
                     fontWeight: 500,
-                    marginBottom: '4px',
                   }}
                 >
-                  {s.name}
-                </div>
-                <div style={{ color: '#66717D', fontSize: '13px' }}>
-                  {s.uploader}
-                </div>
+                  {s.status}
+                </span>
+                <button
+                  type="button"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#66717D',
+                    padding: '4px',
+                    justifySelf: 'end',
+                  }}
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </button>
               </div>
-              <span style={{ color: '#102C4A', fontSize: '14px' }}>
-                {s.lastModified}
-              </span>
-              <span style={{ color: '#102C4A', fontSize: '14px' }}>
-                {s.versions}
-              </span>
-              <span
-                style={{
-                  color: s.status === 'Active' ? '#12B76A' : '#66717D',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              >
-                {s.status}
-              </span>
-              <button
-                type="button"
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#66717D',
-                  padding: '4px',
-                  justifySelf: 'end',
-                }}
-              >
-                <MoreHorizontal className="w-5 h-5" />
-              </button>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

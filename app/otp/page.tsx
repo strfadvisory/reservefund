@@ -21,10 +21,8 @@ function maskEmail(email: string) {
   if (!email || !email.includes('@')) return email;
   const [local, domain] = email.split('@');
   const [domainName, ...rest] = domain.split('.');
-  const maskedLocal =
-    local.length <= 3 ? local + '....' : local.slice(0, 3) + '....';
-  const maskedDomain =
-    domainName.length <= 2 ? domainName + '...' : domainName.slice(0, 2) + '...';
+  const maskedLocal = local.length <= 3 ? local + '....' : local.slice(0, 3) + '....';
+  const maskedDomain = domainName.length <= 2 ? domainName + '...' : domainName.slice(0, 2) + '...';
   return `${maskedLocal}@${maskedDomain}.${rest.join('.') || 'com'}`;
 }
 
@@ -45,6 +43,8 @@ function OtpPageContent() {
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [seconds, setSeconds] = useState(RESEND_SECONDS);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [resending, setResending] = useState(false);
   const inputsRef = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
@@ -57,7 +57,7 @@ function OtpPageContent() {
     inputsRef.current[0]?.focus();
   }, []);
 
-  const canConfirm = digits.every((d) => d !== '');
+  const canConfirm = digits.every((d) => d !== '') && !submitting;
 
   const setDigitAt = (index: number, value: string) => {
     const next = [...digits];
@@ -74,10 +74,7 @@ function OtpPageContent() {
     }
   };
 
-  const handleKeyDown = (
-    index: number,
-    e: KeyboardEvent<HTMLInputElement>
-  ) => {
+  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace') {
       if (digits[index]) {
         setDigitAt(index, '');
@@ -93,10 +90,7 @@ function OtpPageContent() {
   };
 
   const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
-    const pasted = e.clipboardData
-      .getData('text')
-      .replace(/\D/g, '')
-      .slice(0, OTP_LENGTH);
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, OTP_LENGTH);
     if (!pasted) return;
     e.preventDefault();
     const next = Array(OTP_LENGTH).fill('');
@@ -106,82 +100,73 @@ function OtpPageContent() {
     inputsRef.current[focusIndex]?.focus();
   };
 
-  const handleResend = () => {
-    setDigits(Array(OTP_LENGTH).fill(''));
-    setSeconds(RESEND_SECONDS);
-    inputsRef.current[0]?.focus();
+  const handleResend = async () => {
+    if (resending || !email) return;
+    setResending(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/resend-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to resend code');
+      setDigits(Array(OTP_LENGTH).fill(''));
+      setSeconds(RESEND_SECONDS);
+      inputsRef.current[0]?.focus();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setResending(false);
+    }
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!canConfirm) {
       setError('Please enter a valid OTP');
       return;
     }
-    router.push('/profile');
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp: digits.join('') }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Verification failed');
+      router.push('/profile');
+    } catch (e: any) {
+      setError(e.message);
+      setSubmitting(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-white flex">
       <LeftPanel />
-
-      {/* Main Content - fills remaining width */}
       <div className="flex-1 min-w-0 flex justify-center items-center overflow-auto py-12 px-6 md:ml-[353px]">
         <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
-          {/* Form Card */}
-          <div
-            className="bg-white"
-            style={{
-              border: '1px solid #D7D7D7',
-              borderRadius: '7px',
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                padding: '24px 32px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
-              <h1
-                className="font-semibold"
-                style={{ color: '#102C4A', fontSize: '24px', lineHeight: '1.3' }}
-              >
+          <div className="bg-white" style={{ border: '1px solid #D7D7D7', borderRadius: '7px' }}>
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
+              <h1 className="font-semibold" style={{ color: '#102C4A', fontSize: '24px', lineHeight: '1.3' }}>
                 OTP Verification
               </h1>
             </div>
 
-            {/* Body */}
             <div style={{ padding: '24px 32px' }}>
-              <p
-                style={{
-                  color: '#102C4A',
-                  fontSize: '16px',
-                  lineHeight: '1.5',
-                  marginBottom: '4px',
-                }}
-              >
+              <p style={{ color: '#102C4A', fontSize: '16px', lineHeight: '1.5', marginBottom: '4px' }}>
                 Verify your email address {maskedEmail}
               </p>
-              <p
-                style={{
-                  color: '#102C4A',
-                  fontSize: '16px',
-                  lineHeight: '1.5',
-                  marginBottom: '24px',
-                }}
-              >
+              <p style={{ color: '#102C4A', fontSize: '16px', lineHeight: '1.5', marginBottom: '24px' }}>
                 Enter the OTP sent to your registered contact to verify and access the system.
               </p>
 
-              {/* OTP inputs */}
               <div
                 className="grid"
-                style={{
-                  gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-                  gap: '12px',
-                  marginBottom: '16px',
-                  width: '100%',
-                }}
+                style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: '12px', marginBottom: '16px', width: '100%' }}
               >
                 {digits.map((d, i) => (
                   <input
@@ -212,41 +197,29 @@ function OtpPageContent() {
                 ))}
               </div>
 
-              {error && (
-                <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '8px' }}>
-                  {error}
-                </p>
-              )}
+              {error && <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '8px' }}>{error}</p>}
 
-              {/* Timer and Resend */}
-              <div
-                className="flex items-center justify-between"
-                style={{ marginBottom: '24px' }}
-              >
-                <span
-                  className="font-semibold"
-                  style={{ color: '#102C4A', fontSize: '16px' }}
-                >
+              <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
+                <span className="font-semibold" style={{ color: '#102C4A', fontSize: '16px' }}>
                   {seconds} Second
                 </span>
                 <button
                   type="button"
                   onClick={handleResend}
-                  disabled={seconds > 0}
+                  disabled={seconds > 0 || resending}
                   style={{
-                    color: seconds > 0 ? '#B5BCC4' : '#0E519B',
+                    color: seconds > 0 || resending ? '#B5BCC4' : '#0E519B',
                     fontSize: '16px',
                     fontWeight: 500,
                     background: 'none',
                     border: 'none',
-                    cursor: seconds > 0 ? 'not-allowed' : 'pointer',
+                    cursor: seconds > 0 || resending ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  Resend Code
+                  {resending ? 'Sending...' : 'Resend Code'}
                 </button>
               </div>
 
-              {/* Confirm Button */}
               <button
                 onClick={handleConfirm}
                 disabled={!canConfirm}
@@ -258,22 +231,12 @@ function OtpPageContent() {
                   fontSize: '16px',
                 }}
               >
-                Confirm
+                {submitting ? 'Verifying...' : 'Confirm'}
               </button>
             </div>
 
-            {/* Change Profile link */}
-            <div
-              className="text-center"
-              style={{
-                padding: '20px',
-                borderTop: '1px solid #D7D7D7',
-              }}
-            >
-              <Link
-                href="/register"
-                style={{ color: '#102C4A', fontSize: '16px', fontWeight: 500 }}
-              >
+            <div className="text-center" style={{ padding: '20px', borderTop: '1px solid #D7D7D7' }}>
+              <Link href="/register" style={{ color: '#102C4A', fontSize: '16px', fontWeight: 500 }}>
                 Change Profile
               </Link>
             </div>

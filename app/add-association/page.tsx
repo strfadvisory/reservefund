@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Check, Circle, MoreHorizontal, UploadCloud, UserPlus } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
@@ -9,6 +10,7 @@ import { UploadLogoModal } from '@/components/upload-logo-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { DesignationInput } from '@/components/ui/designation-input';
 
 const STEPS = [
   {
@@ -17,14 +19,14 @@ const STEPS = [
       'Add key details about your association to set up your profile and ensure accurate reporting.',
   },
   {
-    title: 'Invite Member of Association name',
-    description:
-      'Invite team members to collaborate by sending them access to your association account.',
-  },
-  {
     title: 'Upload Reserve Study Data',
     description:
       'Upload your reserve study data or use a template to get started quickly and accurately.',
+  },
+  {
+    title: 'Invite Member of Association name',
+    description:
+      'Invite team members to collaborate by sending them access to your association account.',
   },
   {
     title: 'Publish',
@@ -49,39 +51,220 @@ export default function AddAssociationPage() {
   const [city, setCity] = useState('');
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
+  const [associationId, setAssociationId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
-  const goNext = () => {
-    if (active < STEPS.length - 1) setActive(active + 1);
-    else router.push('/associations');
+  type Study = { id: string; fileName: string; size: number; createdAt: string };
+  type Member = { id: string; name: string; email: string; status: string };
+  const [studies, setStudies] = useState<Study[]>([]);
+  const [members, setMembers] = useState<Member[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [memberOpen, setMemberOpen] = useState(false);
+  const [mFirst, setMFirst] = useState('');
+  const [mLast, setMLast] = useState('');
+  const [mEmail, setMEmail] = useState('');
+  const [mDesignation, setMDesignation] = useState('');
+  const [mModifyStudy, setMModifyStudy] = useState(true);
+  const [mCreatePlans, setMCreatePlans] = useState(true);
+  const [mViewPlans, setMViewPlans] = useState(true);
+  const [mTouched, setMTouched] = useState<Record<string, boolean>>({});
+  const [memberSubmitting, setMemberSubmitting] = useState(false);
+  const [memberError, setMemberError] = useState('');
+  const [memberMessage, setMemberMessage] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!memberOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [memberOpen]);
+
+  const markMTouched = (field: string) => setMTouched((t) => ({ ...t, [field]: true }));
+
+  const resetMemberForm = () => {
+    setMFirst('');
+    setMLast('');
+    setMEmail('');
+    setMDesignation('');
+    setMModifyStudy(true);
+    setMCreatePlans(true);
+    setMViewPlans(true);
+    setMTouched({});
+    setMemberError('');
+    setMemberMessage('');
+  };
+
+  const closeMember = () => {
+    setMemberOpen(false);
+    resetMemberForm();
+  };
+
+  const refreshStudies = async () => {
+    if (!associationId) return;
+    try {
+      const res = await fetch(`/api/reserve-studies?associationId=${associationId}`);
+      const data = await res.json();
+      if (Array.isArray(data?.studies)) setStudies(data.studies);
+    } catch {}
+  };
+
+  const refreshMembers = async () => {
+    if (!associationId) return;
+    try {
+      const res = await fetch(`/api/invite?associationId=${associationId}`);
+      const data = await res.json();
+      if (Array.isArray(data?.invites)) {
+        setMembers(
+          data.invites.map((i: any) => ({
+            id: i.id,
+            name: `${i.firstName} ${i.lastName}`.trim(),
+            email: i.email,
+            status: i.status === 'linked' || i.status === 'accepted' ? 'Active' : 'Pending',
+          }))
+        );
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (associationId) {
+      refreshStudies();
+      refreshMembers();
+    }
+  }, [associationId]);
+
+  const onFileChosen = async (file: File) => {
+    if (!associationId) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const fd = new FormData();
+      fd.append('associationId', associationId);
+      fd.append('file', file);
+      const res = await fetch('/api/reserve-studies', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      await refreshStudies();
+    } catch (e: any) {
+      setUploadError(e.message);
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const deleteStudy = async (id: string) => {
+    await fetch(`/api/reserve-studies?id=${id}`, { method: 'DELETE' });
+    refreshStudies();
+  };
+
+  const submitMember = async () => {
+    setMTouched({ firstName: true, lastName: true, email: true, designation: true });
+    if (!mFirst.trim() || !mLast.trim() || !mEmail.trim() || !mDesignation.trim()) {
+      setMemberError('Please fill all required fields');
+      return;
+    }
+    setMemberSubmitting(true);
+    setMemberError('');
+    setMemberMessage('');
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: mFirst,
+          lastName: mLast,
+          email: mEmail,
+          associationId,
+          designation: mDesignation,
+          permissions: {
+            modifyStudy: mModifyStudy,
+            createPlans: mCreatePlans,
+            viewPlans: mViewPlans,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setMemberMessage(data.linked ? 'User already exists — added.' : 'Invitation sent.');
+      await refreshMembers();
+      setTimeout(() => {
+        closeMember();
+      }, 700);
+    } catch (e: any) {
+      setMemberError(e.message);
+    } finally {
+      setMemberSubmitting(false);
+    }
+  };
+
+  const saveAssociation = async (published = false) => {
+    if (!associationName.trim()) {
+      setSaveError('Association name is required');
+      return false;
+    }
+    setSaving(true);
+    setSaveError('');
+    try {
+      const res = await fetch('/api/associations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: associationId,
+          associationName,
+          managerFirstName: firstName,
+          managerLastName: lastName,
+          managerEmail,
+          associationEmail,
+          cellPhone,
+          telephone,
+          zipCode: zip,
+          state,
+          city,
+          address1,
+          address2,
+          published,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      if (data.association?.id) setAssociationId(data.association.id);
+      return true;
+    } catch (e: any) {
+      setSaveError(e.message);
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const goNext = async () => {
+    if (active === 0) {
+      const ok = await saveAssociation(false);
+      if (!ok) return;
+    }
+    if (active === STEPS.length - 1) {
+      const ok = await saveAssociation(true);
+      if (!ok) return;
+      router.push('/associations');
+      return;
+    }
+    setActive(active + 1);
   };
 
   const goPrev = () => {
     if (active > 0) setActive(active - 1);
   };
-
-  const MEMBERS = [
-    { name: 'Jordan Mical', role: 'Super Admin', email: 'Jordiankjdk@gmail.com' },
-    {
-      name: 'Mandra jonson',
-      role: 'Members Management, Reserver Study data',
-      email: 'Jordiankjdk@gmail.com',
-    },
-    {
-      name: 'Mandra jonson',
-      role: 'Members Management, Reserver Study data',
-      email: 'Jordiankjdk@gmail.com',
-    },
-    {
-      name: 'Mandra jonson',
-      role: 'Members Management, Reserver Study data',
-      email: 'Jordiankjdk@gmail.com',
-    },
-    {
-      name: 'Mandra jonson',
-      role: 'Members Management, Reserver Study data',
-      email: 'Jordiankjdk@gmail.com',
-    },
-  ];
 
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
@@ -286,19 +469,29 @@ export default function AddAssociationPage() {
                 <button
                   type="button"
                   onClick={goNext}
+                  disabled={saving}
                   style={{
                     padding: '10px 22px',
-                    background: '#0E519B',
+                    background: saving ? '#B5BCC4' : '#0E519B',
                     color: '#FFFFFF',
                     border: 'none',
                     borderRadius: '7px',
                     fontSize: '14px',
                     fontWeight: 600,
-                    cursor: 'pointer',
+                    cursor: saving ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {active === STEPS.length - 1 ? 'Publish Now' : 'Save & Next'}
+                  {saving
+                    ? 'Saving...'
+                    : active === STEPS.length - 1
+                    ? 'Publish Now'
+                    : 'Save & Next'}
                 </button>
+                {saveError && (
+                  <span style={{ color: '#DC2626', fontSize: '13px', marginLeft: '12px' }}>
+                    {saveError}
+                  </span>
+                )}
               </div>
             </div>
 
@@ -497,7 +690,7 @@ export default function AddAssociationPage() {
               </div>
             )}
 
-            {active === 1 && (
+            {active === 2 && (
               <div>
                 {/* Description + Invite button */}
                 <div
@@ -519,6 +712,14 @@ export default function AddAssociationPage() {
                   </p>
                   <button
                     type="button"
+                    onClick={() => {
+                      if (!associationId) {
+                        setMemberError('Save the association profile first.');
+                        setMemberOpen(true);
+                        return;
+                      }
+                      setMemberOpen(true);
+                    }}
                     className="flex items-center"
                     style={{
                       gap: '10px',
@@ -548,41 +749,24 @@ export default function AddAssociationPage() {
                       marginBottom: '18px',
                     }}
                   >
-                    {MEMBERS.length} Members Found
+                    {members.length} Member{members.length === 1 ? '' : 's'} Found
                   </h3>
+                  {members.length === 0 && (
+                    <p style={{ color: '#66717D', fontSize: '14px' }}>No members yet. Invite people to collaborate.</p>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {MEMBERS.map((m, idx) => (
+                    {members.map((m) => (
                       <div
-                        key={idx}
+                        key={m.id}
                         className="flex items-center justify-between"
-                        style={{
-                          padding: '14px 0',
-                          borderBottom:
-                            idx === MEMBERS.length - 1
-                              ? 'none'
-                              : '1px solid transparent',
-                          gap: '16px',
-                        }}
+                        style={{ padding: '14px 0', gap: '16px' }}
                       >
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <div
-                            style={{
-                              color: '#102C4A',
-                              fontSize: '15px',
-                              fontWeight: 500,
-                              marginBottom: '4px',
-                            }}
-                          >
+                          <div style={{ color: '#102C4A', fontSize: '15px', fontWeight: 500, marginBottom: '4px' }}>
                             {m.name}
                           </div>
-                          <div
-                            style={{
-                              color: '#66717D',
-                              fontSize: '14px',
-                              lineHeight: 1.5,
-                            }}
-                          >
-                            {m.role} , {m.email}
+                          <div style={{ color: '#66717D', fontSize: '14px', lineHeight: 1.5 }}>
+                            {m.status} · {m.email}
                           </div>
                         </div>
                         <button
@@ -606,7 +790,7 @@ export default function AddAssociationPage() {
               </div>
             )}
 
-            {active === 2 && (
+            {active === 1 && (
               <div>
                 <div
                   style={{
@@ -625,8 +809,19 @@ export default function AddAssociationPage() {
                   >
                     You can upload Reserve Study data in multiple ways—add your existing data or download the template and upload it for the study.
                   </p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    style={{ display: 'none' }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) onFileChosen(f);
+                    }}
+                  />
                   <button
                     type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={!associationId || uploading}
                     className="flex items-center"
                     style={{
                       gap: '10px',
@@ -637,12 +832,21 @@ export default function AddAssociationPage() {
                       color: '#102C4A',
                       fontSize: '15px',
                       fontWeight: 500,
-                      cursor: 'pointer',
+                      cursor: !associationId || uploading ? 'not-allowed' : 'pointer',
+                      opacity: !associationId ? 0.6 : 1,
                     }}
                   >
                     <UploadCloud className="w-5 h-5" style={{ color: '#66717D' }} />
-                    Upload Study
+                    {uploading ? 'Uploading…' : 'Upload Study'}
                   </button>
+                  {!associationId && (
+                    <p style={{ color: '#66717D', fontSize: '13px', marginTop: '8px' }}>
+                      Save the association profile first to enable uploads.
+                    </p>
+                  )}
+                  {uploadError && (
+                    <p style={{ color: '#DC2626', fontSize: '13px', marginTop: '8px' }}>{uploadError}</p>
+                  )}
                 </div>
 
                 <div style={{ padding: '22px 28px 32px' }}>
@@ -655,51 +859,40 @@ export default function AddAssociationPage() {
                       marginBottom: '18px',
                     }}
                   >
-                    5 Reserve Study Founded
+                    {studies.length} Reserve Stud{studies.length === 1 ? 'y' : 'ies'} Found
                   </h3>
+                  {studies.length === 0 && (
+                    <p style={{ color: '#66717D', fontSize: '14px' }}>No reserve studies uploaded yet.</p>
+                  )}
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {Array.from({ length: 3 }).map((_, idx) => (
+                    {studies.map((s) => (
                       <div
-                        key={idx}
+                        key={s.id}
                         className="flex items-start justify-between"
                         style={{ padding: '14px 0', gap: '16px' }}
                       >
                         <div style={{ minWidth: 0, flex: 1 }}>
-                          <div
-                            style={{
-                              color: '#102C4A',
-                              fontSize: '15px',
-                              fontWeight: 500,
-                              marginBottom: '4px',
-                            }}
-                          >
-                            Sample Reserve Study
+                          <div style={{ color: '#102C4A', fontSize: '15px', fontWeight: 500, marginBottom: '4px' }}>
+                            {s.fileName}
                           </div>
-                          <div
-                            style={{
-                              color: '#66717D',
-                              fontSize: '14px',
-                              lineHeight: 1.6,
-                            }}
-                          >
-                            120 Units | $450K Reserve | $750K SIRS | 3.5% Inflation | $320/mo
-                            <br />
-                            FY 2025 | 30 Years | 2.8% ROI | $180K Reserve Budget | $520K Operating
+                          <div style={{ color: '#66717D', fontSize: '14px', lineHeight: 1.6 }}>
+                            {(s.size / 1024).toFixed(1)} KB · Uploaded {new Date(s.createdAt).toLocaleString()}
                           </div>
                         </div>
                         <button
                           type="button"
-                          aria-label="Study options"
+                          onClick={() => deleteStudy(s.id)}
                           style={{
                             background: 'none',
                             border: 'none',
                             cursor: 'pointer',
-                            color: '#66717D',
+                            color: '#DC2626',
                             padding: '6px',
                             flexShrink: 0,
+                            fontSize: '14px',
                           }}
                         >
-                          <MoreHorizontal className="w-5 h-5" />
+                          Remove
                         </button>
                       </div>
                     ))}
@@ -711,8 +904,10 @@ export default function AddAssociationPage() {
             {active === 3 && (
               <div style={{ padding: '22px 28px 32px' }}>
                 <AssociationDetail
-                  name={associationName || 'American Bar Association'}
-                  address="330 N Wabash Ave, Chicago, IL 60611, USA, +018483 28293, +018483 28293, info@BarAssociation.com"
+                  name={associationName || 'Association'}
+                  address={[address1, address2, city, state, zip, associationEmail, cellPhone || telephone]
+                    .filter((v) => v && String(v).trim())
+                    .join(', ')}
                   readOnly
                   placeholderLogo
                   showBrandingBanner
@@ -720,6 +915,10 @@ export default function AddAssociationPage() {
                     if (c === 'yes') setLogoOpen(true);
                   }}
                 />
+                <div style={{ marginTop: '20px', color: '#66717D', fontSize: '14px' }}>
+                  {studies.length} reserve stud{studies.length === 1 ? 'y' : 'ies'} · {members.length} member
+                  {members.length === 1 ? '' : 's'}
+                </div>
               </div>
             )}
           </section>
@@ -727,9 +926,250 @@ export default function AddAssociationPage() {
       </div>
 
       <UploadLogoModal open={logoOpen} onClose={() => setLogoOpen(false)} />
+
+      {mounted && memberOpen &&
+        createPortal(
+          <div
+            className="flex items-center justify-center"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(16, 44, 74, 0.55)',
+              backdropFilter: 'blur(2px)',
+              zIndex: 1000,
+              padding: '16px',
+              overflowY: 'auto',
+            }}
+            onClick={closeMember}
+          >
+            <div
+              className="bg-white"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '643px',
+                maxWidth: '100%',
+                border: '1px solid #D7D7D7',
+                borderRadius: '7px',
+                boxShadow: '0 20px 60px rgba(16, 44, 74, 0.25)',
+                margin: 'auto',
+              }}
+            >
+              <div style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
+                <h2 className="font-semibold" style={{ color: '#102C4A', fontSize: '24px', lineHeight: 1.3 }}>
+                  Invite Member
+                </h2>
+              </div>
+
+              <div style={{ padding: '28px 32px 24px' }}>
+                <div className="grid grid-cols-2" style={{ gap: '20px', marginBottom: '20px' }}>
+                  <div>
+                    <Label htmlFor="amFirst" style={modalLabel}>First Name *</Label>
+                    <Input
+                      id="amFirst"
+                      value={mFirst}
+                      onChange={(e) => setMFirst(e.target.value)}
+                      onBlur={() => markMTouched('firstName')}
+                      className="h-11"
+                      style={{
+                        borderColor: mTouched.firstName && !mFirst.trim() ? '#DC2626' : '#D7D7D7',
+                        borderRadius: '7px',
+                        fontSize: '16px',
+                      }}
+                    />
+                    {mTouched.firstName && !mFirst.trim() && (
+                      <p style={fieldErr}>This field is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="amLast" style={modalLabel}>Last Name *</Label>
+                    <Input
+                      id="amLast"
+                      value={mLast}
+                      onChange={(e) => setMLast(e.target.value)}
+                      onBlur={() => markMTouched('lastName')}
+                      className="h-11"
+                      style={{
+                        borderColor: mTouched.lastName && !mLast.trim() ? '#DC2626' : '#D7D7D7',
+                        borderRadius: '7px',
+                        fontSize: '16px',
+                      }}
+                    />
+                    {mTouched.lastName && !mLast.trim() && (
+                      <p style={fieldErr}>This field is required</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2" style={{ gap: '20px', marginBottom: '24px' }}>
+                  <div>
+                    <Label htmlFor="amEmail" style={modalLabel}>Email Address*</Label>
+                    <Input
+                      id="amEmail"
+                      type="email"
+                      value={mEmail}
+                      onChange={(e) => setMEmail(e.target.value)}
+                      onBlur={() => markMTouched('email')}
+                      className="h-11"
+                      style={{
+                        borderColor: mTouched.email && !mEmail.trim() ? '#DC2626' : '#D7D7D7',
+                        borderRadius: '7px',
+                        fontSize: '16px',
+                      }}
+                    />
+                    {mTouched.email && !mEmail.trim() && (
+                      <p style={fieldErr}>This field is required</p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="amDesignation" style={modalLabel}>Designation/Role *</Label>
+                    <DesignationInput
+                      id="amDesignation"
+                      value={mDesignation}
+                      onChange={setMDesignation}
+                      onBlur={() => markMTouched('designation')}
+                      invalid={mTouched.designation && !mDesignation.trim()}
+                    />
+                    {mTouched.designation && !mDesignation.trim() && (
+                      <p style={fieldErr}>This field is required</p>
+                    )}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    border: '1px solid #D7D7D7',
+                    borderRadius: '7px',
+                    marginBottom: '20px',
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid #D7D7D7' }}>
+                    <h3 className="font-semibold" style={{ color: '#102C4A', fontSize: '16px' }}>
+                      Choose Permission
+                    </h3>
+                  </div>
+                  <div style={{ padding: '16px 20px' }}>
+                    <PermissionRow label="Modify Study Data" checked={mModifyStudy} onChange={setMModifyStudy} />
+                    <PermissionRow label="Create Plans and Versions" checked={mCreatePlans} onChange={setMCreatePlans} />
+                    <PermissionRow label="View Plans and Versions" checked={mViewPlans} onChange={setMViewPlans} last />
+                  </div>
+                </div>
+
+                {memberError && <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '10px' }}>{memberError}</p>}
+                {memberMessage && <p style={{ color: '#10B981', fontSize: '14px', marginBottom: '10px' }}>{memberMessage}</p>}
+
+                <button
+                  type="button"
+                  onClick={submitMember}
+                  disabled={memberSubmitting || !associationId}
+                  className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95"
+                  style={{
+                    backgroundColor: memberSubmitting || !associationId ? '#B5BCC4' : '#0E519B',
+                    borderRadius: '7px',
+                    padding: '14px',
+                    fontSize: '16px',
+                    border: 'none',
+                    cursor: memberSubmitting || !associationId ? 'not-allowed' : 'pointer',
+                    marginBottom: '12px',
+                  }}
+                >
+                  {memberSubmitting ? 'Sending…' : 'Invite'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={closeMember}
+                  className="w-full font-semibold transition-all duration-200 hover:bg-gray-50"
+                  style={{
+                    background: '#fff',
+                    border: '1px solid #D7D7D7',
+                    borderRadius: '7px',
+                    padding: '14px',
+                    fontSize: '16px',
+                    color: '#102C4A',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Not now
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
+
+function PermissionRow({
+  label,
+  checked,
+  onChange,
+  last,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  last?: boolean;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between"
+      style={{ paddingTop: '12px', paddingBottom: last ? '0' : '12px' }}
+    >
+      <span style={{ color: '#102C4A', fontSize: '16px' }}>{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        style={{
+          position: 'relative',
+          width: '44px',
+          height: '24px',
+          borderRadius: '9999px',
+          background: checked ? '#0E519B' : '#D7D7D7',
+          border: 'none',
+          cursor: 'pointer',
+          transition: 'background 0.2s',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            position: 'absolute',
+            top: '2px',
+            left: checked ? '22px' : '2px',
+            width: '20px',
+            height: '20px',
+            borderRadius: '9999px',
+            background: '#fff',
+            transition: 'left 0.2s',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
+          }}
+        />
+      </button>
+    </div>
+  );
+}
+
+const modalLabel: React.CSSProperties = {
+  color: '#102C4A',
+  fontSize: '16px',
+  marginBottom: '8px',
+  display: 'block',
+};
+
+const fieldErr: React.CSSProperties = {
+  color: '#DC2626',
+  fontSize: '14px',
+  marginTop: '4px',
+};
 
 const outlineHeaderBtn: React.CSSProperties = {
   padding: '10px 22px',

@@ -10,14 +10,14 @@
     {
       "title": "Register",
       "path": "/register",
-      "description": "Account creation flow for new users.",
+      "description": "Dynamic account creation — creates draft user in DB and starts the profile/OTP flow.",
       "category": "Auth",
       "status": "Ready"
     },
     {
       "title": "OTP Verification",
       "path": "/otp",
-      "description": "One-time passcode verification step.",
+      "description": "Dynamic OTP step — verifies code against DB and creates the session.",
       "category": "Auth",
       "status": "Ready"
     },
@@ -143,7 +143,7 @@
     {
       "title": "Info",
       "path": "/info",
-      "description": "Generic info page.",
+      "description": "Dynamic profile step — saves company/user details and triggers OTP email via SMTP.",
       "category": "Dynamic",
       "status": "Ready"
     },

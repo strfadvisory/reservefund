@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { UserCircle2 } from 'lucide-react';
@@ -10,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
+import { UploadLogoModal } from '@/components/upload-logo-modal';
 import {
   Select,
   SelectContent,
@@ -83,42 +83,64 @@ export default function ProfilePage() {
   const [address2, setAddress2] = useState('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
-  const [brandingOpen, setBrandingOpen] = useState(false);
-  const [branding, setBranding] = useState<'default' | 'customs'>('customs');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!brandingOpen) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [brandingOpen]);
+  const [logoOpen, setLogoOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   const canConfirm =
     companyName.trim() !== '' &&
     zipCode.trim() !== '' &&
     state.trim() !== '' &&
     city.trim() !== '' &&
-    address1.trim() !== '';
+    address1.trim() !== '' &&
+    !saving;
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!canConfirm) return;
-    setBrandingOpen(true);
+    setSaving(true);
+    setSaveError('');
+    try {
+      const res = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyName,
+          website,
+          linkedin,
+          zipCode,
+          state,
+          city,
+          address1,
+          address2,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save profile');
+      setLogoOpen(true);
+    } catch (e: any) {
+      setSaveError(e.message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleBrandingContinue = () => {
-    setBrandingOpen(false);
-    router.push('/dashboard');
+  const handleLogoApply = async ({ file }: { file: File; size: number }) => {
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/profile/logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+    } catch (e) {
+      console.error('Logo upload failed', e);
+    } finally {
+      setLogoOpen(false);
+      router.push('/dashboard');
+    }
   };
 
-  const handleBrandingSkip = () => {
-    setBrandingOpen(false);
+  const handleLogoClose = () => {
+    setLogoOpen(false);
     router.push('/dashboard');
   };
 
@@ -457,6 +479,10 @@ export default function ProfilePage() {
                   />
                 </div>
 
+                {saveError && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '12px' }}>{saveError}</p>
+                )}
+
                 {/* Confirm Button */}
                 <button
                   onClick={handleConfirm}
@@ -469,7 +495,7 @@ export default function ProfilePage() {
                     fontSize: '16px',
                   }}
                 >
-                  Confirm
+                  {saving ? 'Saving...' : 'Confirm'}
                 </button>
               </div>
 
@@ -503,251 +529,11 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Customs Branding Modal */}
-      {mounted && brandingOpen &&
-        createPortal(
-        <div
-          className="flex items-center justify-center"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(16, 44, 74, 0.55)',
-            backdropFilter: 'blur(2px)',
-            zIndex: 1000,
-            padding: '16px',
-            overflowY: 'auto',
-          }}
-          onClick={() => setBrandingOpen(false)}
-        >
-          <div
-            className="bg-white"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: '643px',
-              maxWidth: '100%',
-              border: '1px solid #D7D7D7',
-              borderRadius: '7px',
-              boxShadow: '0 20px 60px rgba(16, 44, 74, 0.25)',
-              margin: 'auto',
-            }}
-          >
-            {/* Header */}
-            <div
-              style={{
-                padding: '24px 32px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
-              <h2
-                className="font-semibold"
-                style={{
-                  color: '#102C4A',
-                  fontSize: '24px',
-                  lineHeight: '1.3',
-                }}
-              >
-                Customs Branding
-              </h2>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '24px 32px' }}>
-              <p
-                style={{
-                  color: '#102C4A',
-                  fontSize: '16px',
-                  lineHeight: '1.5',
-                  marginBottom: '24px',
-                }}
-              >
-                Invite people to collaborate, manage Association, Reserver
-                studies, and review versions together.
-              </p>
-
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'row',
-                  flexWrap: 'nowrap',
-                  gap: '20px',
-                  marginBottom: '28px',
-                }}
-              >
-                {/* Default Branding */}
-                <button
-                  type="button"
-                  onClick={() => setBranding('default')}
-                  className="text-left"
-                  style={{
-                    flex: '1 1 0',
-                    minWidth: 0,
-                    background: '#F4F7FB',
-                    border:
-                      branding === 'default'
-                        ? '2px solid #0E519B'
-                        : '1px solid #D7D7D7',
-                    borderRadius: '10px',
-                    padding: '20px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className="font-semibold"
-                      style={{ color: '#102C4A', fontSize: '16px' }}
-                    >
-                      Default Branding
-                    </span>
-                    <span
-                      className="flex items-center justify-center shrink-0"
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '9999px',
-                        border:
-                          branding === 'default'
-                            ? '2px solid #0E519B'
-                            : '2px solid #B5BCC4',
-                        background: '#fff',
-                      }}
-                    >
-                      {branding === 'default' && (
-                        <span
-                          style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '9999px',
-                            background: '#0E519B',
-                          }}
-                        />
-                      )}
-                    </span>
-                  </div>
-                  {/* Preview card */}
-                  <div
-                    style={{
-                      marginTop: '20px',
-                      background: '#fff',
-                      border: '1px solid #E3E8EF',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      height: '110px',
-                    }}
-                  >
-                    <div
-                      style={{ background: '#0E519B', height: '32px' }}
-                    />
-                  </div>
-                </button>
-
-                {/* Customs Branding */}
-                <button
-                  type="button"
-                  onClick={() => setBranding('customs')}
-                  className="text-left"
-                  style={{
-                    flex: '1 1 0',
-                    minWidth: 0,
-                    background: '#F4F7FB',
-                    border:
-                      branding === 'customs'
-                        ? '2px solid #0E519B'
-                        : '1px solid #D7D7D7',
-                    borderRadius: '10px',
-                    padding: '20px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div className="flex items-start justify-between">
-                    <span
-                      className="font-semibold"
-                      style={{ color: '#102C4A', fontSize: '16px' }}
-                    >
-                      Customs Branding
-                    </span>
-                    <span
-                      className="flex items-center justify-center shrink-0"
-                      style={{
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '9999px',
-                        border:
-                          branding === 'customs'
-                            ? '2px solid #0E519B'
-                            : '2px solid #B5BCC4',
-                        background: '#fff',
-                      }}
-                    >
-                      {branding === 'customs' && (
-                        <span
-                          style={{
-                            width: '10px',
-                            height: '10px',
-                            borderRadius: '9999px',
-                            background: '#0E519B',
-                          }}
-                        />
-                      )}
-                    </span>
-                  </div>
-                  {/* Preview card */}
-                  <div
-                    style={{
-                      marginTop: '20px',
-                      background: '#fff',
-                      border: '1px solid #E3E8EF',
-                      borderRadius: '8px',
-                      overflow: 'hidden',
-                      height: '110px',
-                    }}
-                  >
-                    <div
-                      style={{ background: '#F5A623', height: '32px' }}
-                    />
-                  </div>
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleBrandingContinue}
-                className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95"
-                style={{
-                  backgroundColor: '#0E519B',
-                  borderRadius: '7px',
-                  padding: '14px',
-                  fontSize: '16px',
-                }}
-              >
-                Continue
-              </button>
-
-              <div className="text-center" style={{ marginTop: '16px' }}>
-                <button
-                  type="button"
-                  onClick={handleBrandingSkip}
-                  style={{
-                    color: '#102C4A',
-                    fontSize: '16px',
-                    fontWeight: 500,
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Skip for now
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>,
-          document.body
-        )}
+      <UploadLogoModal
+        open={logoOpen}
+        onClose={handleLogoClose}
+        onApply={handleLogoApply}
+      />
     </div>
   );
 }

@@ -1,0 +1,39 @@
+{
+  "roles": {
+    "management": "Property Manager",
+    "bank": "Relationship Manager",
+    "reserve": "Reserve Specialist",
+    "advisor": "Investment Specialist",
+    "board": "Members"
+  },
+  "designations": [
+    "Super Admin",
+    "Property Manager",
+    "Assistant Property Manager",
+    "Operations Manager",
+    "Accountant / Finance Manager",
+    "Analyst",
+
+    "President",
+    "Vice President",
+    "Treasurer",
+    "Secretary",
+    "Board Member",
+    "Committee Member",
+    "Homeowner / Member",
+
+    "Reserve Specialist",
+    "Reserve Analyst",
+    "Project Manager",
+    "Data Analyst",
+
+    "Investment Advisor",
+    "Portfolio Manager",
+    "Financial Analyst",
+    "Client Manager",
+
+    "Bank Admin",
+    "Relationship Manager",
+    "Investment Officer"
+  ]
+}

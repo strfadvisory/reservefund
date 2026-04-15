@@ -7,63 +7,26 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ChevronLeft, Eye, EyeOff, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { PhoneInput } from '@/components/ui/phone-input';
+import { DesignationInput } from '@/components/ui/designation-input';
 import { Label } from '@/components/ui/label';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 
 const COMPANY_TYPES: Record<string, { label: string; icon: string }> = {
-  management: {
-    label: 'Management Company',
-    icon: '/images/source/business.png',
-  },
-  bank: {
-    label: 'Bank Office',
-    icon: '/images/source/teller-female.png',
-  },
-  reserve: {
-    label: 'Reserve Study Company',
-    icon: '/images/source/inflation.png',
-  },
-  advisor: {
-    label: 'Investor Advisor',
-    icon: '/images/source/advisor.png',
-  },
-  board: {
-    label: 'Board Members',
-    icon: '/images/source/coworking.png',
-  },
-  other: {
-    label: 'Other',
-    icon: '/images/other.svg',
-  },
+  management: { label: 'Management Company', icon: '/images/source/business.png' },
+  bank: { label: 'Bank Office', icon: '/images/source/teller-female.png' },
+  reserve: { label: 'Reserve Study Company', icon: '/images/source/inflation.png' },
+  advisor: { label: 'Investor Advisor', icon: '/images/source/advisor.png' },
+  board: { label: 'Board Members', icon: '/images/source/coworking.png' },
+  other: { label: 'Other', icon: '/images/other.svg' },
 };
 
-const PASSWORD_RULES: {
-  id: string;
-  label: string;
-  test: (v: string) => boolean;
-}[] = [
+const PASSWORD_RULES: { id: string; label: string; test: (v: string) => boolean }[] = [
   { id: 'len', label: 'At least 8 characters', test: (v) => v.length >= 8 },
-  {
-    id: 'upper',
-    label: 'At least one uppercase letter (A-Z)',
-    test: (v) => /[A-Z]/.test(v),
-  },
-  {
-    id: 'lower',
-    label: 'At least one lowercase letter (a-z)',
-    test: (v) => /[a-z]/.test(v),
-  },
-  {
-    id: 'num',
-    label: 'At least one number (0-9)',
-    test: (v) => /[0-9]/.test(v),
-  },
-  {
-    id: 'special',
-    label: 'At least one special character (!@#$%^&*)',
-    test: (v) => /[!@#$%^&*]/.test(v),
-  },
+  { id: 'upper', label: 'At least one uppercase letter (A-Z)', test: (v) => /[A-Z]/.test(v) },
+  { id: 'lower', label: 'At least one lowercase letter (a-z)', test: (v) => /[a-z]/.test(v) },
+  { id: 'num', label: 'At least one number (0-9)', test: (v) => /[0-9]/.test(v) },
+  { id: 'special', label: 'At least one special character (!@#$%^&*)', test: (v) => /[!@#$%^&*]/.test(v) },
 ];
 
 export default function InfoPage() {
@@ -78,6 +41,7 @@ function InfoPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const typeKey = searchParams.get('type') ?? 'reserve';
+  const userId = searchParams.get('userId') ?? '';
   const company = COMPANY_TYPES[typeKey] ?? COMPANY_TYPES.reserve;
 
   const [companyName, setCompanyName] = useState('');
@@ -91,20 +55,16 @@ function InfoPageContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showRePassword, setShowRePassword] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState('');
   const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
 
-  const passwordScore = useMemo(
-    () => PASSWORD_RULES.filter((r) => r.test(password)).length,
-    [password]
-  );
-
-  const emailValid = useMemo(
-    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    [email]
-  );
+  const passwordScore = useMemo(() => PASSWORD_RULES.filter((r) => r.test(password)).length, [password]);
+  const emailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), [email]);
 
   const canContinue = useMemo(
     () =>
+      !!userId &&
       companyName.trim() !== '' &&
       firstName.trim() !== '' &&
       lastName.trim() !== '' &&
@@ -112,117 +72,67 @@ function InfoPageContent() {
       phone.trim() !== '' &&
       emailValid &&
       passwordScore === 5 &&
-      password === rePassword,
-    [companyName, firstName, lastName, designation, phone, emailValid, passwordScore, password, rePassword]
+      password === rePassword &&
+      !submitting,
+    [userId, companyName, firstName, lastName, designation, phone, emailValid, passwordScore, password, rePassword, submitting]
   );
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!canContinue) return;
-    router.push(`/otp?type=${typeKey}&email=${encodeURIComponent(email)}`);
+    setSubmitting(true);
+    setServerError('');
+    try {
+      const res = await fetch('/api/auth/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, companyName, firstName, lastName, designation, phone, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+      router.push(`/otp?type=${typeKey}&email=${encodeURIComponent(email)}`);
+    } catch (e: any) {
+      setServerError(e.message);
+      setSubmitting(false);
+    }
   };
 
   const strengthLabel = useMemo(
-    () =>
-      passwordScore <= 1
-        ? 'Weak'
-        : passwordScore <= 2
-        ? 'Fair'
-        : passwordScore <= 3
-        ? 'Good'
-        : passwordScore <= 4
-        ? 'Strong'
-        : 'Excellent',
+    () => (passwordScore <= 1 ? 'Weak' : passwordScore <= 2 ? 'Fair' : passwordScore <= 3 ? 'Good' : passwordScore <= 4 ? 'Strong' : 'Excellent'),
     [passwordScore]
   );
-
   const strengthColor = useMemo(
-    () =>
-      passwordScore <= 1
-        ? '#DC2626'
-        : passwordScore <= 2
-        ? '#F59E0B'
-        : passwordScore <= 3
-        ? '#EAB308'
-        : passwordScore <= 4
-        ? '#22C55E'
-        : '#16A34A',
+    () => (passwordScore <= 1 ? '#DC2626' : passwordScore <= 2 ? '#F59E0B' : passwordScore <= 3 ? '#EAB308' : passwordScore <= 4 ? '#22C55E' : '#16A34A'),
     [passwordScore]
   );
 
   return (
     <div className="min-h-screen bg-white flex">
       <LeftPanel />
-
-      {/* Main Content - fills remaining width */}
       <div className="flex-1 min-w-0 flex justify-center items-start overflow-auto py-12 px-6 md:ml-[353px]">
         <div className="w-full flex flex-col my-auto" style={{ maxWidth: '643px' }}>
-          {/* Back to List */}
           <Link
             href="/register"
             className="flex items-center gap-1 mb-4"
-            style={{
-              color: '#0E519B',
-              fontSize: '16px',
-              fontWeight: 500,
-              textDecoration: 'none',
-            }}
+            style={{ color: '#0E519B', fontSize: '16px', fontWeight: 500, textDecoration: 'none' }}
           >
             <ChevronLeft className="w-5 h-5" />
             Back to List
           </Link>
 
-          {/* Form Card */}
-          <div
-            className="bg-white"
-            style={{
-              border: '1px solid #D7D7D7',
-              borderRadius: '7px',
-            }}
-          >
-            {/* Header */}
-            <div
-              className="flex items-center gap-4"
-              style={{
-                padding: '24px 32px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
+          <div className="bg-white" style={{ border: '1px solid #D7D7D7', borderRadius: '7px' }}>
+            <div className="flex items-center gap-4" style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
               <div style={{ width: '56px', height: '56px', flexShrink: 0 }}>
-                <Image
-                  src={company.icon}
-                  alt={company.label}
-                  width={56}
-                  height={56}
-                  style={{ width: '100%', height: '100%', objectFit: 'contain' }}
-                />
+                <Image src={company.icon} alt={company.label} width={56} height={56} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               </div>
-              <h1
-                className="font-semibold"
-                style={{ color: '#102C4A', fontSize: '24px', lineHeight: '1.3' }}
-              >
+              <h1 className="font-semibold" style={{ color: '#102C4A', fontSize: '24px', lineHeight: '1.3' }}>
                 Build Your {company.label} Profile
                 <br />
                 and Get Started Today.
               </h1>
             </div>
 
-            {/* Company Name */}
-            <div
-              style={{
-                padding: '24px 32px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
-              <Label
-                htmlFor="companyName"
-                style={{
-                  color: '#102C4A',
-                  fontSize: '16px',
-                  fontWeight: 400,
-                  marginBottom: '8px',
-                  display: 'block',
-                }}
-              >
+            <div style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
+              <Label htmlFor="companyName" style={{ color: '#102C4A', fontSize: '16px', fontWeight: 400, marginBottom: '8px', display: 'block' }}>
                 Enter your Company name <span style={{ color: '#102C4A' }}>*</span>
               </Label>
               <Input
@@ -231,52 +141,24 @@ function InfoPageContent() {
                 onChange={(e) => setCompanyName(e.target.value)}
                 onBlur={() => markTouched('companyName')}
                 className="h-11"
-                style={{
-                  borderRadius: '7px',
-                  fontSize: '16px',
-                  borderColor: touched.companyName && !companyName.trim() ? '#DC2626' : undefined,
-                }}
+                style={{ borderRadius: '7px', fontSize: '16px', borderColor: touched.companyName && !companyName.trim() ? '#DC2626' : undefined }}
               />
               {touched.companyName && !companyName.trim() && (
                 <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
               )}
             </div>
 
-            {/* Your Information heading */}
-            <div
-              style={{
-                padding: '24px 32px 16px',
-              }}
-            >
-              <h2
-                className="font-semibold"
-                style={{ color: '#102C4A', fontSize: '20px', marginBottom: '4px' }}
-              >
+            <div style={{ padding: '24px 32px 16px' }}>
+              <h2 className="font-semibold" style={{ color: '#102C4A', fontSize: '20px', marginBottom: '4px' }}>
                 Your Information
               </h2>
-              <p style={{ color: '#66717D', fontSize: '16px' }}>
-                Add your professional information to keep it saved for future use.
-              </p>
+              <p style={{ color: '#66717D', fontSize: '16px' }}>Add your professional information to keep it saved for future use.</p>
             </div>
 
-            {/* Your Information fields */}
-            <div
-              style={{
-                padding: '0 32px 24px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
+            <div style={{ padding: '0 32px 24px', borderBottom: '1px solid #D7D7D7' }}>
               <div className="grid grid-cols-2" style={{ gap: '20px' }}>
                 <div>
-                  <Label
-                    htmlFor="firstName"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="firstName" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     First Name <span>*</span>
                   </Label>
                   <Input
@@ -292,15 +174,7 @@ function InfoPageContent() {
                   )}
                 </div>
                 <div>
-                  <Label
-                    htmlFor="lastName"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="lastName" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     Last Name <span>*</span>
                   </Label>
                   <Input
@@ -316,47 +190,26 @@ function InfoPageContent() {
                   )}
                 </div>
                 <div>
-                  <Label
-                    htmlFor="designation"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="designation" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     Designation / Role <span>*</span>
                   </Label>
-                  <Input
+                  <DesignationInput
                     id="designation"
                     value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
+                    onChange={setDesignation}
                     onBlur={() => markTouched('designation')}
-                    className="h-11"
-                    style={{ borderColor: touched.designation && !designation.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
+                    invalid={touched.designation && !designation.trim()}
                   />
                   {touched.designation && !designation.trim() && (
                     <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
                   )}
                 </div>
                 <div>
-                  <Label
-                    htmlFor="phone"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="phone" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     Phone number with Country Code <span>*</span>
                   </Label>
                   <div onBlur={() => markTouched('phone')}>
-                    <PhoneInput
-                      id="phone"
-                      value={phone}
-                      onChange={setPhone}
-                    />
+                    <PhoneInput id="phone" value={phone} onChange={setPhone} />
                   </div>
                   {touched.phone && !phone.trim() && (
                     <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
@@ -365,37 +218,16 @@ function InfoPageContent() {
               </div>
             </div>
 
-            {/* Login Details heading */}
             <div style={{ padding: '24px 32px 16px' }}>
-              <h2
-                className="font-semibold"
-                style={{ color: '#102C4A', fontSize: '20px', marginBottom: '4px' }}
-              >
+              <h2 className="font-semibold" style={{ color: '#102C4A', fontSize: '20px', marginBottom: '4px' }}>
                 Login Details
               </h2>
-              <p style={{ color: '#66717D', fontSize: '16px' }}>
-                Create your admin login so you can sign in easily next time using these details.
-              </p>
+              <p style={{ color: '#66717D', fontSize: '16px' }}>Create your admin login so you can sign in easily next time using these details.</p>
             </div>
 
-            {/* Login Details fields */}
-            <div
-              style={{
-                padding: '0 32px 24px',
-                borderBottom: '1px solid #D7D7D7',
-              }}
-            >
-              {/* Email */}
+            <div style={{ padding: '0 32px 24px', borderBottom: '1px solid #D7D7D7' }}>
               <div style={{ marginBottom: '20px' }}>
-                <Label
-                  htmlFor="email"
-                  style={{
-                    color: '#102C4A',
-                    fontSize: '16px',
-                    marginBottom: '8px',
-                    display: 'block',
-                  }}
-                >
+                <Label htmlFor="email" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                   Email Address <span>*</span>
                 </Label>
                 <Input
@@ -405,7 +237,7 @@ function InfoPageContent() {
                   onChange={(e) => setEmail(e.target.value)}
                   onBlur={() => markTouched('email')}
                   className="h-11"
-                  style={{   borderRadius: '7px', fontSize: '16px' }}
+                  style={{ borderRadius: '7px', fontSize: '16px' }}
                 />
                 {touched.email && !email.trim() && (
                   <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
@@ -415,18 +247,9 @@ function InfoPageContent() {
                 )}
               </div>
 
-              {/* Passwords */}
               <div className="grid grid-cols-2" style={{ gap: '20px' }}>
                 <div>
-                  <Label
-                    htmlFor="password"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="password" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     Password <span>*</span>
                   </Label>
                   <div className="relative">
@@ -437,11 +260,7 @@ function InfoPageContent() {
                       onChange={(e) => setPassword(e.target.value)}
                       onBlur={() => markTouched('password')}
                       className="h-11 pr-10"
-                      style={{
-                        borderColor: touched.password && !password.trim() ? '#DC2626' : '#D7D7D7',
-                        borderRadius: '7px',
-                        fontSize: '16px',
-                      }}
+                      style={{ borderColor: touched.password && !password.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
                     />
                     <button
                       type="button"
@@ -449,11 +268,7 @@ function InfoPageContent() {
                       className="absolute top-1/2 -translate-y-1/2"
                       style={{ right: '12px', color: '#66717D' }}
                     >
-                      {showPassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                   {touched.password && !password.trim() && (
@@ -461,15 +276,7 @@ function InfoPageContent() {
                   )}
                 </div>
                 <div>
-                  <Label
-                    htmlFor="rePassword"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}
-                  >
+                  <Label htmlFor="rePassword" style={{ color: '#102C4A', fontSize: '16px', marginBottom: '8px', display: 'block' }}>
                     Re-password <span>*</span>
                   </Label>
                   <div className="relative">
@@ -480,11 +287,7 @@ function InfoPageContent() {
                       onChange={(e) => setRePassword(e.target.value)}
                       onBlur={() => markTouched('rePassword')}
                       className="h-11 pr-10"
-                      style={{
-                        borderColor: touched.rePassword && !rePassword.trim() ? '#DC2626' : '#D7D7D7',
-                        borderRadius: '7px',
-                        fontSize: '16px',
-                      }}
+                      style={{ borderColor: touched.rePassword && !rePassword.trim() ? '#DC2626' : '#D7D7D7', borderRadius: '7px', fontSize: '16px' }}
                     />
                     <button
                       type="button"
@@ -492,11 +295,7 @@ function InfoPageContent() {
                       className="absolute top-1/2 -translate-y-1/2"
                       style={{ right: '12px', color: '#66717D' }}
                     >
-                      {showRePassword ? (
-                        <EyeOff className="w-5 h-5" />
-                      ) : (
-                        <Eye className="w-5 h-5" />
-                      )}
+                      {showRePassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                   {touched.rePassword && !rePassword.trim() && (
@@ -508,63 +307,39 @@ function InfoPageContent() {
                 </div>
               </div>
 
-              {/* Password Strength */}
               <div style={{ marginTop: '24px' }}>
                 <div
                   className="flex items-center justify-between flex-nowrap"
                   style={{ paddingBottom: '8px', whiteSpace: 'nowrap', borderBottom: `2px solid ${strengthColor}` }}
                 >
-                  <span
-                    className="font-semibold"
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '16px',
-                      paddingBottom: '6px',
-                    }}
-                  >
+                  <span className="font-semibold" style={{ color: '#102C4A', fontSize: '16px', paddingBottom: '6px' }}>
                     Password Strength
                   </span>
-                  <span
-                    className="font-semibold"
-                    style={{ color: strengthColor, fontSize: '16px', paddingBottom: '6px' }}
-                  >
+                  <span className="font-semibold" style={{ color: strengthColor, fontSize: '16px', paddingBottom: '6px' }}>
                     {strengthLabel} ({passwordScore}/5)
                   </span>
                 </div>
-                <div
-                  style={{
-                    borderTop: '1px solid #D7D7D7',
-                    paddingTop: '12px',
-                    marginTop: '0',
-                  }}
-                >
+                <div style={{ borderTop: '1px solid #D7D7D7', paddingTop: '12px', marginTop: '0' }}>
                   {PASSWORD_RULES.map((rule) => {
                     const passed = rule.test(password);
                     return (
                       <div
                         key={rule.id}
                         className="flex items-center justify-between"
-                        style={{
-                          fontSize: '16px',
-                          color: passed ? '#16A34A' : '#102C4A',
-                          padding: '3px 0',
-                        }}
+                        style={{ fontSize: '16px', color: passed ? '#16A34A' : '#102C4A', padding: '3px 0' }}
                       >
                         <span>{rule.label}</span>
-                        {passed && (
-                          <Check
-                            className="w-4 h-4"
-                            style={{ color: '#16A34A' }}
-                            strokeWidth={3}
-                          />
-                        )}
+                        {passed && <Check className="w-4 h-4" style={{ color: '#16A34A' }} strokeWidth={3} />}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Continue Button */}
+              {serverError && (
+                <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '16px' }}>{serverError}</p>
+              )}
+
               <button
                 onClick={handleContinue}
                 disabled={!canContinue}
@@ -577,16 +352,10 @@ function InfoPageContent() {
                   marginTop: '24px',
                 }}
               >
-                Continue
+                {submitting ? 'Sending OTP...' : 'Continue'}
               </button>
 
-              <p
-                style={{
-                  color: '#66717D',
-                  fontSize: '14px',
-                  marginTop: '12px',
-                }}
-              >
+              <p style={{ color: '#66717D', fontSize: '14px', marginTop: '12px' }}>
                 Please note that fields marked with * are mandatory.
               </p>
             </div>

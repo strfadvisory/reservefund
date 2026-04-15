@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -10,18 +10,30 @@ export type UploadReserveStudyModalProps = {
   open: boolean;
   onClose: () => void;
   onSubmit?: () => void;
+  defaultAssociationId?: string;
+};
+
+type AssociationOption = {
+  id: string;
+  associationName: string;
 };
 
 export function UploadReserveStudyModal({
   open,
   onClose,
   onSubmit,
+  defaultAssociationId,
 }: UploadReserveStudyModalProps) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [associations, setAssociations] = useState<AssociationOption[]>([]);
+  const [loadingAssociations, setLoadingAssociations] = useState(false);
   const [association, setAssociation] = useState('');
   const [studyName, setStudyName] = useState('');
-  const [fileName, setFileName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -36,20 +48,88 @@ export function UploadReserveStudyModal({
     };
   }, [open]);
 
-  const handleClose = () => {
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setLoadingAssociations(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/associations', { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled) return;
+        const list: AssociationOption[] = data.associations || [];
+        setAssociations(list);
+        setAssociation((prev) => {
+          if (prev) return prev;
+          if (defaultAssociationId && list.some((a) => a.id === defaultAssociationId)) {
+            return defaultAssociationId;
+          }
+          return list[0]?.id ?? '';
+        });
+      } catch {
+        if (!cancelled) setAssociations([]);
+      } finally {
+        if (!cancelled) setLoadingAssociations(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, defaultAssociationId]);
+
+  const resetForm = () => {
     setAssociation('');
     setStudyName('');
-    setFileName('');
+    setFile(null);
+    setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleClose = () => {
+    if (submitting) return;
+    resetForm();
     onClose();
   };
 
-  const canCreateManually = association.trim() !== '' && studyName.trim() !== '';
-  const canUpload = association.trim() !== '' && fileName.trim() !== '';
+  const canCreateManually =
+    association.trim() !== '' && studyName.trim() !== '' && !submitting;
+  const canUpload = association.trim() !== '' && file !== null && !submitting;
 
-  const handleSubmit = () => {
+  const handleCreateManually = () => {
+    const params = new URLSearchParams({
+      associationId: association,
+      name: studyName,
+    });
     handleClose();
     onSubmit?.();
-    router.push('/study');
+    router.push(`/study?${params.toString()}`);
+  };
+
+  const handleUpload = async () => {
+    if (!file || !association) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const form = new FormData();
+      form.append('associationId', association);
+      form.append('file', file);
+      const res = await fetch('/api/reserve-studies', {
+        method: 'POST',
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+      resetForm();
+      onClose();
+      onSubmit?.();
+      router.refresh();
+    } catch (e: any) {
+      setError(e.message || 'Upload failed');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!mounted || !open) return null;
@@ -85,7 +165,6 @@ export function UploadReserveStudyModal({
           margin: 'auto',
         }}
       >
-        {/* Header */}
         <div
           style={{
             padding: '24px 32px',
@@ -104,9 +183,7 @@ export function UploadReserveStudyModal({
           </h2>
         </div>
 
-        {/* Body */}
         <div style={{ padding: '28px 32px 24px' }}>
-          {/* Select Association */}
           <div style={{ marginBottom: '20px' }}>
             <Label
               htmlFor="urs-association"
@@ -123,6 +200,7 @@ export function UploadReserveStudyModal({
               id="urs-association"
               value={association}
               onChange={(e) => setAssociation(e.target.value)}
+              disabled={loadingAssociations || submitting}
               style={{
                 width: '100%',
                 height: '44px',
@@ -132,18 +210,25 @@ export function UploadReserveStudyModal({
                 color: association ? '#102C4A' : '#999',
                 padding: '0 16px',
                 backgroundColor: '#fff',
-                cursor: 'pointer',
+                cursor: loadingAssociations ? 'wait' : 'pointer',
                 outline: 'none',
               }}
             >
-              <option value="" disabled>Choose</option>
-              <option value="caldron">Caldron Associations</option>
-              <option value="apex">Apex Global</option>
-              <option value="horizon">Horizon HOA</option>
+              <option value="" disabled>
+                {loadingAssociations
+                  ? 'Loading…'
+                  : associations.length === 0
+                  ? 'No associations available'
+                  : 'Choose'}
+              </option>
+              {associations.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.associationName}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Reserver Study Name */}
           <div style={{ marginBottom: '24px' }}>
             <Label
               htmlFor="urs-studyName"
@@ -160,6 +245,7 @@ export function UploadReserveStudyModal({
               id="urs-studyName"
               value={studyName}
               onChange={(e) => setStudyName(e.target.value)}
+              disabled={submitting}
               className="h-11"
               style={{
                 borderColor: '#D7D7D7',
@@ -169,11 +255,10 @@ export function UploadReserveStudyModal({
             />
           </div>
 
-          {/* Create Manually */}
           <button
             type="button"
             disabled={!canCreateManually}
-            onClick={handleSubmit}
+            onClick={handleCreateManually}
             className="w-full font-semibold transition-all duration-200"
             style={{
               background: '#EFF4FA',
@@ -189,7 +274,6 @@ export function UploadReserveStudyModal({
             Create Manually
           </button>
 
-          {/* Or divider */}
           <div
             className="flex items-center"
             style={{ margin: '24px 0', gap: '16px' }}
@@ -199,7 +283,6 @@ export function UploadReserveStudyModal({
             <div style={{ flex: 1, height: '1px', background: '#D7D7D7' }} />
           </div>
 
-          {/* Template description + download link */}
           <div
             className="flex items-start justify-between"
             style={{ gap: '16px', marginBottom: '12px' }}
@@ -230,14 +313,13 @@ export function UploadReserveStudyModal({
             </button>
           </div>
 
-          {/* File upload field */}
           <div
             className="flex items-stretch"
             style={{
               border: '1px solid #D7D7D7',
               borderRadius: '7px',
               overflow: 'hidden',
-              marginBottom: '28px',
+              marginBottom: error ? '12px' : '28px',
             }}
           >
             <label
@@ -248,18 +330,21 @@ export function UploadReserveStudyModal({
                 color: '#102C4A',
                 fontSize: '15px',
                 fontWeight: 500,
-                cursor: 'pointer',
+                cursor: submitting ? 'not-allowed' : 'pointer',
                 background: '#fff',
                 whiteSpace: 'nowrap',
+                opacity: submitting ? 0.6 : 1,
               }}
             >
               Upload
             </label>
             <input
+              ref={fileInputRef}
               id="urs-fileUpload"
               type="file"
+              disabled={submitting}
               style={{ display: 'none' }}
-              onChange={(e) => setFileName(e.target.files?.[0]?.name || '')}
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
             <div
               className="flex items-center"
@@ -274,15 +359,26 @@ export function UploadReserveStudyModal({
                 whiteSpace: 'nowrap',
               }}
             >
-              {fileName}
+              {file?.name || ''}
             </div>
           </div>
 
-          {/* Upload submit */}
+          {error && (
+            <div
+              style={{
+                color: '#B42318',
+                fontSize: '14px',
+                marginBottom: '16px',
+              }}
+            >
+              {error}
+            </div>
+          )}
+
           <button
             type="button"
             disabled={!canUpload}
-            onClick={handleSubmit}
+            onClick={handleUpload}
             className="w-full font-semibold text-white transition-all duration-200"
             style={{
               backgroundColor: canUpload ? '#0E519B' : '#B5BCC4',
@@ -293,21 +389,21 @@ export function UploadReserveStudyModal({
               cursor: canUpload ? 'pointer' : 'not-allowed',
             }}
           >
-            Upload
+            {submitting ? 'Uploading…' : 'Upload'}
           </button>
 
-          {/* Not now */}
           <div className="text-center" style={{ marginTop: '18px' }}>
             <button
               type="button"
               onClick={handleClose}
+              disabled={submitting}
               style={{
                 color: '#102C4A',
                 fontSize: '16px',
                 fontWeight: 500,
                 background: 'none',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: submitting ? 'not-allowed' : 'pointer',
               }}
             >
               Not now

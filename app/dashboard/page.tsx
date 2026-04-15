@@ -7,6 +7,9 @@ import { FolderPlus, Play, Search, Upload, UserCircle2, UserPlus, X } from 'luci
 import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { TabSwitcher } from '@/components/tab-switcher';
+import roleMapJson from '@/config.json';
+
+const ROLE_MAP = (roleMapJson as any).roles as Record<string, string>;
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -72,18 +75,129 @@ export default function DashboardPage() {
   const [activeGuide, setActiveGuide] = useState<
     { title: string; videoUrl: string } | null
   >(null);
-  const [introOpen, setIntroOpen] = useState(false);
+  const [introOpen, setIntroOpen] = useState(true);
   const [dontShowIntro, setDontShowIntro] = useState(false);
   const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+  const [userName, setUserName] = useState('');
+  const [addressLine, setAddressLine] = useState('');
+  const [roleLabel, setRoleLabel] = useState('Reserve Specialist');
+  const [associations, setAssociations] = useState<
+    { id: string; name: string; sub: string; status: string }[]
+  >([]);
+  const [invites, setInvites] = useState<
+    { id: string; name: string; email: string; status: string }[]
+  >([]);
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
+  const [inviteError, setInviteError] = useState('');
+
+  const refreshInvites = async () => {
+    try {
+      const res = await fetch('/api/invite');
+      const data = await res.json();
+      if (Array.isArray(data?.invites)) {
+        setInvites(
+          data.invites.map((i: any) => ({
+            id: i.id,
+            name: `${i.firstName} ${i.lastName}`.trim(),
+            email: i.email,
+            status: i.status === 'linked' ? 'Active' : i.status === 'accepted' ? 'Active' : 'Pending',
+          }))
+        );
+      }
+    } catch {}
+  };
+
+  useEffect(() => {
+    refreshInvites();
+  }, []);
+
+  const submitInvite = async () => {
+    markTouched('firstName');
+    markTouched('lastName');
+    markTouched('email');
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) return;
+    setInviteSubmitting(true);
+    setInviteError('');
+    setInviteMessage('');
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, lastName, email }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to invite');
+      setInviteMessage(data.linked ? 'User already exists — added to your list.' : 'Invitation email sent.');
+      await refreshInvites();
+      setTimeout(() => closeInvite(), 800);
+    } catch (e: any) {
+      setInviteError(e.message);
+    } finally {
+      setInviteSubmitting(false);
+    }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/associations')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const list = Array.isArray(data?.associations) ? data.associations : [];
+        setAssociations(
+          list.map((a: any) => ({
+            id: a.id,
+            name: a.associationName,
+            sub:
+              [a.managerFirstName, a.managerLastName].filter(Boolean).join(' ') ||
+              a.city ||
+              '',
+            status: a.published ? 'Active' : 'Pending',
+          }))
+        );
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const u = data?.user;
+        if (!u) return;
+        const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
+        if (name) setUserName(name);
+        const stateZip = [u.state, u.zipCode].filter(Boolean).join(' ').trim();
+        const addr = [
+          u.companyName,
+          u.address1,
+          u.address2,
+          u.city,
+          stateZip,
+        ]
+          .map((p) => (p ? String(p).trim() : ''))
+          .filter(Boolean)
+          .join(', ');
+        if (addr) setAddressLine(addr);
+        if (u.companyType && ROLE_MAP[u.companyType]) {
+          setRoleLabel(ROLE_MAP[u.companyType]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setMounted(true);
-    if (typeof window !== 'undefined') {
-      const hidden = window.localStorage.getItem('dashboard-invite-intro-hidden');
-      if (hidden !== 'true') {
-        setIntroOpen(true);
-      }
-    }
+    setIntroOpen(true);
   }, []);
 
   useEffect(() => {
@@ -131,6 +245,8 @@ export default function DashboardPage() {
     setLastName('');
     setEmail('');
     setTouched({});
+    setInviteError('');
+    setInviteMessage('');
   };
 
   return (
@@ -163,7 +279,7 @@ export default function DashboardPage() {
                 marginBottom: '6px',
               }}
             >
-              Welcome back, Atul singh
+              Welcome back, {userName || 'there'}
             </h1>
             <p
               style={{
@@ -172,7 +288,7 @@ export default function DashboardPage() {
                 margin: 0,
               }}
             >
-              Apex Global Management Solutions, 450 Park Avenue, 12th Floor, New York, NY 10022, USA
+              {addressLine || 'Apex Global Management Solutions, 450 Park Avenue, 12th Floor, New York, NY 10022, USA'}
             </p>
           </div>
           <div className="flex items-center">
@@ -326,10 +442,10 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Column 2: Reserve Specialist */}
+          {/* Column 2: Role label per companyType (from config.json) */}
           <ListColumn
-            title="Reserve Specialist"
-            items={PROPERTY_MANAGERS.map((pm) => ({
+            title={roleLabel}
+            items={invites.map((pm) => ({
               primary: pm.name,
               secondary: pm.email,
               status: pm.status,
@@ -342,14 +458,14 @@ export default function DashboardPage() {
           {/* Column 3: Associations */}
           <ListColumn
             title="Associations"
-            items={ASSOCIATIONS.map((a) => ({
+            items={associations.map((a) => ({
               primary: a.name,
               secondary: a.sub,
               status: a.status,
             }))}
             cta="Add Associations"
             ctaIcon={<FolderPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
-            onCtaClick={() => router.push('/associations')}
+            onCtaClick={() => router.push('/add-association')}
           />
 
           {/* Column 4: Reserver Study */}
@@ -607,7 +723,7 @@ export default function DashboardPage() {
                     lineHeight: 1.3,
                   }}
                 >
-                  Invite Properties Manager
+                  Invite {roleLabel}
                 </h2>
               </div>
 
@@ -699,7 +815,7 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                {/* Invite Property Manager Button */}
+                {/* Invite {roleLabel} Button */}
                 <button
                   type="button"
                   onClick={openInviteFromIntro}
@@ -714,7 +830,7 @@ export default function DashboardPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  Invite Property Manager
+                  Invite {roleLabel}
                   <UserPlus className="w-5 h-5" />
                 </button>
 
@@ -765,7 +881,7 @@ export default function DashboardPage() {
           document.body
         )}
 
-      {/* Invite Properties Manager Modal */}
+      {/* Invite {roleLabel} Modal */}
       {mounted && inviteOpen &&
         createPortal(
           <div
@@ -813,7 +929,7 @@ export default function DashboardPage() {
                     lineHeight: 1.3,
                   }}
                 >
-                  Invite Properties Manager
+                  Invite {roleLabel}
                 </h2>
               </div>
 
@@ -907,20 +1023,28 @@ export default function DashboardPage() {
                   />
                 </div>
 
+                {inviteError && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '10px' }}>{inviteError}</p>
+                )}
+                {inviteMessage && (
+                  <p style={{ color: '#10B981', fontSize: '14px', marginBottom: '10px' }}>{inviteMessage}</p>
+                )}
                 <button
                   type="button"
-                  onClick={closeInvite}
+                  onClick={submitInvite}
+                  disabled={inviteSubmitting}
                   className="w-full flex items-center justify-center font-semibold text-white transition-all duration-200 hover:opacity-95"
                   style={{
-                    backgroundColor: '#0E519B',
+                    backgroundColor: inviteSubmitting ? '#9CA3AF' : '#0E519B',
                     borderRadius: '7px',
                     padding: '14px',
                     fontSize: '16px',
                     gap: '10px',
+                    border: 'none',
+                    cursor: inviteSubmitting ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  Invite Property Manager
-                  <UserPlus className="w-5 h-5" />
+                  {inviteSubmitting ? 'Sending…' : <>Invite {roleLabel} <UserPlus className="w-5 h-5" /></>}
                 </button>
 
                 <div className="text-center" style={{ padding: '18px 0 20px' }}>

@@ -15,10 +15,27 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push('/dashboard');
+    if (!email.trim() || !password.trim() || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Login failed');
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -142,17 +159,22 @@ export default function LoginPage() {
                 </Link>
               </div>
 
+              {error && (
+                <p style={{ color: '#DC2626', fontSize: '14px', marginBottom: '12px' }}>{error}</p>
+              )}
+
               <button
                 type="submit"
-                className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95"
+                disabled={submitting}
+                className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95 disabled:cursor-not-allowed"
                 style={{
-                  backgroundColor: '#0E519B',
+                  backgroundColor: submitting ? '#B5BCC4' : '#0E519B',
                   borderRadius: '7px',
                   padding: '14px',
                   fontSize: '16px',
                 }}
               >
-                Login Account
+                {submitting ? 'Signing in...' : 'Login Account'}
               </button>
             </div>
 
