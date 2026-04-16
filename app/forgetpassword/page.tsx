@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,11 +9,37 @@ import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 
 export default function ForgetPasswordPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email.trim()) {
+      setTouched((t) => ({ ...t, email: true }));
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send reset link');
+      }
+
+      router.push(`/otp?email=${encodeURIComponent(data.email)}&mode=reset`);
+
+    } catch (error: any) {
+      setError(error.message);
+    }
   };
 
   return (
@@ -77,6 +104,9 @@ export default function ForgetPasswordPage() {
                 />
                 {touched.email && !email.trim() && (
                   <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '4px' }}>This field is required</p>
+                )}
+                {error && (
+                  <p style={{ color: '#DC2626', fontSize: '14px', marginTop: '12px', textAlign: 'center' }}>{error}</p>
                 )}
               </div>
 
