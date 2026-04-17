@@ -103,3 +103,21 @@ model Session {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
+
+model SuperAdmin {
+  id           String         @id @default(auto()) @map("_id") @db.ObjectId
+  username     String         @unique
+  passwordHash String
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  sessions     AdminSession[]
+}
+
+model AdminSession {
+  id           String     @id @default(auto()) @map("_id") @db.ObjectId
+  token        String     @unique
+  adminId      String     @db.ObjectId
+  admin        SuperAdmin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+}

@@ -1,13 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import {
-  CloudUpload,
-  FileDown,
-  History,
-  FileSpreadsheet,
-} from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createPortal } from 'react-dom';
+import { Check, CloudUpload, FileDown, History, FileSpreadsheet } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
+type Association = {
+  id: string;
+  associationName: string;
+  address: string;
+};
 
 const SUMMARY_ROWS: {
   leftLabel: string;
@@ -71,7 +73,50 @@ const ITEMS = [
 
 export default function StudyPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [modelName, setModelName] = useState('');
+  const [mounted, setMounted] = useState(false);
+  const [selectAssocOpen, setSelectAssocOpen] = useState(false);
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [selectedAssocId, setSelectedAssocId] = useState<string>('');
+  const [assocLoading, setAssocLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    if (searchParams.get('selectAssociation') === '1') {
+      setSelectAssocOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!selectAssocOpen) return;
+    let cancelled = false;
+    setAssocLoading(true);
+    (async () => {
+      try {
+        const res = await fetch('/api/associations', { cache: 'no-store' });
+        const data = await res.json();
+        if (cancelled) return;
+        const list = (data.associations || []).map((a: any) => ({
+          id: a.id,
+          associationName: a.associationName,
+          address: [a.address1, a.address2, a.city, a.state, a.zipCode]
+            .filter(Boolean)
+            .join(', '),
+        }));
+        setAssociations(list);
+        if (list.length > 0) setSelectedAssocId(list[0].id);
+      } finally {
+        if (!cancelled) setAssocLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selectAssocOpen]);
+
+  const handleConfirmAssociation = () => {
+    setSelectAssocOpen(false);
+    router.replace('/study', { scroll: false });
+  };
 
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
@@ -471,6 +516,153 @@ export default function StudyPage() {
           ))}
         </div>
       </div>
+
+      {/* Select Association popup */}
+      {mounted && selectAssocOpen &&
+        createPortal(
+          <div
+            className="flex items-center justify-center"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: '100vh',
+              backgroundColor: 'rgba(16, 44, 74, 0.55)',
+              backdropFilter: 'blur(2px)',
+              zIndex: 1000,
+              padding: '16px',
+              overflowY: 'auto',
+            }}
+          >
+            <div
+              className="bg-white"
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '643px',
+                maxWidth: '100%',
+                border: '1px solid #D7D7D7',
+                borderRadius: '7px',
+                boxShadow: '0 20px 60px rgba(16, 44, 74, 0.25)',
+                margin: 'auto',
+              }}
+            >
+              {/* Header */}
+              <div style={{ padding: '24px 32px', borderBottom: '1px solid #D7D7D7' }}>
+                <h2
+                  className="font-semibold"
+                  style={{ color: '#102C4A', fontSize: '24px', lineHeight: 1.3 }}
+                >
+                  Select Association
+                </h2>
+              </div>
+
+              {/* Body */}
+              <div style={{ padding: '28px 32px 24px' }}>
+                <p style={{ color: '#102C4A', fontSize: '16px', lineHeight: 1.5, marginBottom: '24px' }}>
+                  Choose the association you want to upload a reserve study for.
+                </p>
+
+                {/* Dynamic association list — same step-row pattern as "Choose for next step" */}
+                {assocLoading ? (
+                  <div style={{ color: '#66717D', fontSize: '16px', marginBottom: '28px' }}>
+                    Loading…
+                  </div>
+                ) : associations.length === 0 ? (
+                  <div style={{ color: '#66717D', fontSize: '16px', marginBottom: '28px' }}>
+                    No associations found. Please create one first.
+                  </div>
+                ) : (
+                  <div
+                    className="thin-scrollbar"
+                    style={{ maxHeight: '360px', overflowY: 'auto', marginBottom: '28px' }}
+                  >
+                    {associations.map((a, idx) => {
+                      const isSelected = a.id === selectedAssocId;
+                      const isLast = idx === associations.length - 1;
+                      return (
+                        <div key={a.id}>
+                          <div
+                            className="flex items-center"
+                            style={{ gap: '20px', marginBottom: '20px', cursor: 'pointer' }}
+                            onClick={() => setSelectedAssocId(a.id)}
+                          >
+                            {/* Numbered circle — mirrors dashboard step circles exactly */}
+                            <div
+                              className="flex items-center justify-center shrink-0"
+                              style={{
+                                width: '56px',
+                                height: '56px',
+                                borderRadius: '9999px',
+                                border: isSelected ? '1.5px solid #0E519B' : '1px solid #D7D7D7',
+                                background: isSelected ? '#0E519B' : 'transparent',
+                                color: isSelected ? '#FFFFFF' : '#102C4A',
+                                fontSize: '16px',
+                                fontWeight: 500,
+                                flexShrink: 0,
+                                transition: 'all 150ms',
+                              }}
+                            >
+                              {String(idx + 1).padStart(2, '0')}
+                            </div>
+
+                            {/* Association name + address */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p
+                                style={{
+                                  color: '#102C4A',
+                                  fontSize: '16px',
+                                  fontWeight: isSelected ? 600 : 400,
+                                  lineHeight: 1.5,
+                                  margin: 0,
+                                  marginBottom: a.address ? '2px' : 0,
+                                }}
+                              >
+                                {a.associationName}
+                              </p>
+                              {a.address && (
+                                <p style={{ color: '#66717D', fontSize: '14px', margin: 0, lineHeight: 1.5 }}>
+                                  {a.address}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Divider between rows — same as dashboard */}
+                          {!isLast && (
+                            <div style={{ height: '1px', background: '#E5E7EB', margin: '0 0 20px' }} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* CTA — same style as "Invite {roleLabel}" button */}
+                <button
+                  type="button"
+                  onClick={handleConfirmAssociation}
+                  disabled={!selectedAssocId}
+                  className="w-full flex items-center justify-center font-semibold text-white transition-all duration-200 hover:opacity-95"
+                  style={{
+                    backgroundColor: selectedAssocId ? '#0E519B' : '#B5BCC4',
+                    borderRadius: '7px',
+                    padding: '14px',
+                    fontSize: '16px',
+                    gap: '10px',
+                    border: 'none',
+                    cursor: selectedAssocId ? 'pointer' : 'not-allowed',
+                  }}
+                >
+                  Upload Reserve Study
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

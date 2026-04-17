@@ -478,7 +478,7 @@ export default function DashboardPage() {
             cta="Upload Reserver Study"
             ctaIcon={<Upload className="w-5 h-5" style={{ color: '#66717D' }} />}
             noBorder
-            onCtaClick={() => setUploadOpen(true)}
+            onCtaClick={() => router.push('/study?selectAssociation=1')}
           />
         </div>
 
