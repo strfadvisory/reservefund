@@ -95,6 +95,24 @@ model ReserveStudy {
   createdAt     DateTime @default(now())
 }
 
+model Study {
+  id                      String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId                  String   @db.ObjectId
+  associationId           String?  @db.ObjectId
+  modelName               String
+  housingUnits            String?
+  beginningReserveFunds   String?
+  sirsReserveFunds        String?
+  inflationRate           String?
+  averageMonthlyFee       String?
+  beginningFiscalYear     String?
+  yearsCovered            String?
+  rateOfReturn            String?
+  items                   Json
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+}
+
 model Session {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   token     String   @unique

@@ -41,8 +41,10 @@ export function AssociationPopup({
 
   const handleSelect = (idx: number) => {
     setSelected(idx);
-    onSelect?.(idx);
-    onClose();
+    if (onSelect) {
+      onSelect(idx);
+    }
+    // Don't call onClose here - let parent handle it
   };
 
   if (!mounted || !open) return null;

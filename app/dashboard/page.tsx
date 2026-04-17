@@ -90,6 +90,9 @@ export default function DashboardPage() {
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
+  const [studies, setStudies] = useState<
+    { id: string; name: string; sub: string }[]
+  >([]);
 
   const refreshInvites = async () => {
     try {
@@ -108,8 +111,42 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  const fetchStudies = async () => {
+    try {
+      const res = await fetch('/api/studies');
+      const data = await res.json();
+      if (res.status === 401) {
+        console.error('Not authenticated');
+        return;
+      }
+      if (Array.isArray(data?.studies)) {
+        // Fetch associations to map IDs to names
+        const assocRes = await fetch('/api/associations');
+        const assocData = await assocRes.json();
+        const associationsMap: Record<string, string> = {};
+        
+        if (Array.isArray(assocData?.associations)) {
+          assocData.associations.forEach((a: any) => {
+            associationsMap[a.id] = a.associationName;
+          });
+        }
+
+        setStudies(
+          data.studies.map((s: any) => ({
+            id: s.id,
+            name: s.modelName,
+            sub: s.associationId ? (associationsMap[s.associationId] || 'Unknown Association') : 'No Association',
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Failed to fetch studies:', error);
+    }
+  };
+
   useEffect(() => {
     refreshInvites();
+    fetchStudies();
   }, []);
 
   const submitInvite = async () => {
@@ -471,7 +508,7 @@ export default function DashboardPage() {
           {/* Column 4: Reserver Study */}
           <ListColumn
             title="Reserver Study"
-            items={RESERVE_STUDIES.map((r) => ({
+            items={studies.map((r) => ({
               primary: r.name,
               secondary: r.sub,
             }))}
