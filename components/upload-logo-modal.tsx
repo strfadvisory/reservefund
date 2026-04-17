@@ -298,7 +298,7 @@ export function UploadLogoModal({ open, onClose, onApply }: UploadLogoModalProps
             >
               <ImagePlus
                 className="w-12 h-12"
-                style={{ color: '#102C4A', marginBottom: '26px' }}
+                style={{ color: dragActive ? '#0E519B' : '#102C4A', marginBottom: '26px', transition: 'color 0.2s' }}
                 strokeWidth={1.5}
               />
               <div
@@ -309,7 +309,7 @@ export function UploadLogoModal({ open, onClose, onApply }: UploadLogoModalProps
                   marginBottom: '8px',
                 }}
               >
-                Drag drop your Brand Logo
+                {dragActive ? 'Drop your logo here' : 'Drag & Drop your Brand Logo'}
               </div>
               <div
                 style={{
@@ -317,10 +317,41 @@ export function UploadLogoModal({ open, onClose, onApply }: UploadLogoModalProps
                   fontSize: '14px',
                   lineHeight: 1.5,
                   maxWidth: '320px',
+                  marginBottom: '20px',
                 }}
               >
-                Add a high-quality logo Max size 2 MB and for best view use. JPG or .PNG formate
+                Add a high-quality logo. Max size 2 MB — JPG or PNG format
               </div>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  color: '#66717D',
+                  fontSize: '13px',
+                  marginBottom: '4px',
+                }}
+              >
+                <span style={{ flex: 1, height: '1px', background: '#D7D7D7' }} />
+                <span>or</span>
+                <span style={{ flex: 1, height: '1px', background: '#D7D7D7' }} />
+              </div>
+              <span
+                style={{
+                  marginTop: '12px',
+                  display: 'inline-block',
+                  padding: '9px 24px',
+                  background: '#FFFFFF',
+                  border: '1px solid #D7D7D7',
+                  borderRadius: '7px',
+                  color: '#102C4A',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Browse files
+              </span>
               <input
                 ref={inputRef}
                 id="logo-upload-input"
