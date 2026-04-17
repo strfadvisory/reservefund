@@ -23,6 +23,7 @@ export type AssociationDetailStudy = {
 export type AssociationDetailProps = {
   name: string;
   address: string;
+  published?: boolean;
   readOnly?: boolean;
   showBrandingBanner?: boolean;
   placeholderLogo?: boolean;
@@ -39,6 +40,7 @@ export type AssociationDetailProps = {
 export function AssociationDetail({
   name,
   address,
+  published,
   readOnly = false,
   showBrandingBanner = false,
   placeholderLogo = false,
@@ -65,6 +67,46 @@ export function AssociationDetail({
           background: '#FFFFFF',
         }}
       >
+        {showBrandingBanner && (
+          <div
+            className="flex items-center justify-between"
+            style={{
+              margin: '20px 20px 0',
+              padding: '14px 18px',
+              background: '#FEF7E6',
+              border: '1px solid #F6E3A1',
+              borderRadius: '7px',
+              gap: '16px',
+            }}
+          >
+            <p
+              style={{
+                color: '#102C4A',
+                fontSize: '14px',
+                margin: 0,
+                lineHeight: 1.45,
+              }}
+            >
+              Do you want to leverage your personal branding and turn this application into your own branded solution?
+            </p>
+            <div className="flex items-center" style={{ gap: '10px', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => onBrandingChoice?.('no')}
+                style={outlineBtn}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={() => onBrandingChoice?.('yes')}
+                style={outlineBtn}
+              >
+                Yes
+              </button>
+            </div>
+          </div>
+        )}
         <div
           className="flex items-start"
           style={{ padding: '20px 24px', gap: '20px' }}
@@ -114,18 +156,39 @@ export function AssociationDetail({
             />
           )}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2
-              style={{
-                color: '#102C4A',
-                fontSize: '20px',
-                fontWeight: 600,
-                margin: 0,
-                marginBottom: '6px',
-                lineHeight: 1.3,
-              }}
+            <div
+              className="flex items-center"
+              style={{ gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}
             >
-              {name}
-            </h2>
+              <h2
+                style={{
+                  color: '#102C4A',
+                  fontSize: '20px',
+                  fontWeight: 600,
+                  margin: 0,
+                  lineHeight: 1.3,
+                }}
+              >
+                {name}
+              </h2>
+              {published !== undefined && (
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    padding: '3px 10px',
+                    borderRadius: '20px',
+                    lineHeight: 1.6,
+                    flexShrink: 0,
+                    background: published ? '#ECFDF5' : '#F6F7F9',
+                    color: published ? '#12B76A' : '#66717D',
+                    border: published ? '1px solid #A7F3D0' : '1px solid #D7D7D7',
+                  }}
+                >
+                  {published ? 'Public' : 'Draft'}
+                </span>
+              )}
+            </div>
             <p
               style={{
                 color: '#66717D',
@@ -143,46 +206,6 @@ export function AssociationDetail({
             </button>
           )}
         </div>
-        {showBrandingBanner && (
-          <div
-            className="flex items-center justify-between"
-            style={{
-              margin: '0 20px 20px',
-              padding: '14px 18px',
-              background: '#FEF7E6',
-              border: '1px solid #F6E3A1',
-              borderRadius: '7px',
-              gap: '16px',
-            }}
-          >
-            <p
-              style={{
-                color: '#102C4A',
-                fontSize: '14px',
-                margin: 0,
-                lineHeight: 1.45,
-              }}
-            >
-              Do you want to leverage your personal branding and turn this application into your own branded solution?
-            </p>
-            <div className="flex items-center" style={{ gap: '10px', flexShrink: 0 }}>
-              <button
-                type="button"
-                onClick={() => onBrandingChoice?.('no')}
-                style={outlineBtn}
-              >
-                No
-              </button>
-              <button
-                type="button"
-                onClick={() => onBrandingChoice?.('yes')}
-                style={outlineBtn}
-              >
-                Yes
-              </button>
-            </div>
-          </div>
-        )}
         <div
           style={{
             display: 'grid',

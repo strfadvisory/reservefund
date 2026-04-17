@@ -27,6 +27,7 @@ type Association = {
   address2: string | null;
   logoFileId?: string | null;
   createdAt?: string;
+  published?: boolean;
 };
 
 type Invite = {
@@ -291,34 +292,83 @@ export default function AssociationsPage() {
                       key={assoc.id}
                       type="button"
                       onClick={() => setActiveId(assoc.id)}
+                      className="flex items-center"
                       style={{
                         textAlign: 'left',
-                        padding: '14px 16px',
+                        padding: '12px 14px',
                         borderRadius: '7px',
                         border: '1px solid #D7D7D7',
                         background: isActive ? '#F1F4F9' : '#FFFFFF',
                         cursor: 'pointer',
+                        gap: '12px',
                       }}
                     >
-                      <div
-                        style={{
-                          color: '#102C4A',
-                          fontSize: '15px',
-                          fontWeight: 600,
-                          marginBottom: '4px',
-                          lineHeight: 1.35,
-                        }}
-                      >
-                        {assoc.associationName}
-                      </div>
-                      <div
-                        style={{
-                          color: '#66717D',
-                          fontSize: '13px',
-                          lineHeight: 1.45,
-                        }}
-                      >
-                        {composeAddress(assoc) || '—'}
+                      {assoc.logoFileId ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={`/api/logo/${assoc.logoFileId}`}
+                          alt={assoc.associationName}
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '6px',
+                            objectFit: 'cover',
+                            flexShrink: 0,
+                            border: '1px solid #ECEEF1',
+                          }}
+                        />
+                      ) : (
+                        <div
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '6px',
+                            flexShrink: 0,
+                            background: '#F1F4F9',
+                            border: '1px solid #ECEEF1',
+                          }}
+                        />
+                      )}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          className="flex items-center"
+                          style={{ gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}
+                        >
+                          <span
+                            style={{
+                              color: '#102C4A',
+                              fontSize: '15px',
+                              fontWeight: 600,
+                              lineHeight: 1.35,
+                            }}
+                          >
+                            {assoc.associationName}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 500,
+                              padding: '2px 8px',
+                              borderRadius: '20px',
+                              lineHeight: 1.6,
+                              flexShrink: 0,
+                              background: assoc.published ? '#ECFDF5' : '#F6F7F9',
+                              color: assoc.published ? '#12B76A' : '#66717D',
+                              border: assoc.published ? '1px solid #A7F3D0' : '1px solid #D7D7D7',
+                            }}
+                          >
+                            {assoc.published ? 'Public' : 'Draft'}
+                          </span>
+                        </div>
+                        <div
+                          style={{
+                            color: '#66717D',
+                            fontSize: '13px',
+                            lineHeight: 1.45,
+                          }}
+                        >
+                          {composeAddress(assoc) || '—'}
+                        </div>
                       </div>
                     </button>
                   );
@@ -332,7 +382,10 @@ export default function AssociationsPage() {
             {active ? (
               <AssociationDetail
                 name={active.associationName}
+                published={active.published}
                 address={composeDetailAddress(active)}
+                logoUrl={active.logoFileId ? `/api/logo/${active.logoFileId}` : null}
+                placeholderLogo={!active.logoFileId}
                 invitedBy="Myself"
                 invitationDate={formatDate(active.createdAt)}
                 reserveStudyCount={studies.length}

@@ -5,7 +5,11 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Check, Circle, MoreHorizontal, UploadCloud, UserPlus } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
-import { AssociationDetail } from '@/components/association-detail';
+import {
+  AssociationDetail,
+  type AssociationDetailMember,
+  type AssociationDetailStudy,
+} from '@/components/association-detail';
 import { UploadLogoModal } from '@/components/upload-logo-modal';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,6 +43,8 @@ export default function AddAssociationPage() {
   const router = useRouter();
   const [active, setActive] = useState(0);
   const [logoOpen, setLogoOpen] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
   const [associationName, setAssociationName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -52,8 +58,14 @@ export default function AddAssociationPage() {
   const [address1, setAddress1] = useState('');
   const [address2, setAddress2] = useState('');
   const [associationId, setAssociationId] = useState<string | null>(null);
+  const [isPublished, setIsPublished] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
+  const fieldErr = (field: string, value: string) =>
+    touched[field] && !value.trim() ? 'This field is required' : '';
 
   type Study = { id: string; fileName: string; size: number; createdAt: string };
   type Member = { id: string; name: string; email: string; status: string };
@@ -208,10 +220,14 @@ export default function AddAssociationPage() {
     }
   };
 
-  const saveAssociation = async (published = false) => {
-    if (!associationName.trim()) {
-      setSaveError('Association name is required');
-      return false;
+  const saveAssociation = async (published = false, skipValidation = false) => {
+    if (!skipValidation) {
+      const requiredFields = { associationName, firstName, lastName, zip, state, city };
+      const hasEmpty = Object.values(requiredFields).some((v) => !v.trim());
+      if (hasEmpty) {
+        setTouched({ associationName: true, firstName: true, lastName: true, zip: true, state: true, city: true });
+        return false;
+      }
     }
     setSaving(true);
     setSaveError('');
@@ -239,6 +255,7 @@ export default function AddAssociationPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to save');
       if (data.association?.id) setAssociationId(data.association.id);
+      if (published) setIsPublished(true);
       return true;
     } catch (e: any) {
       setSaveError(e.message);
@@ -249,15 +266,15 @@ export default function AddAssociationPage() {
   };
 
   const goNext = async () => {
-    if (active === 0) {
-      const ok = await saveAssociation(false);
-      if (!ok) return;
-    }
-    if (active === STEPS.length - 1) {
-      const ok = await saveAssociation(true);
-      if (!ok) return;
+    const isLastStep = active === STEPS.length - 1;
+    const ok = await saveAssociation(isLastStep, active > 0);
+    if (!ok) return;
+    if (isLastStep) {
       router.push('/associations');
       return;
+    }
+    if (active === 2) {
+      await Promise.all([refreshStudies(), refreshMembers()]);
     }
     setActive(active + 1);
   };
@@ -279,7 +296,7 @@ export default function AddAssociationPage() {
           paddingBottom: '104px',
         }}
       >
-        <div style={{ width: '100%', maxWidth: '1242px', padding: '0 24px' }}>
+        <div className="flex items-center" style={{ width: '100%', maxWidth: '1242px', padding: '0 24px', gap: '14px' }}>
           <h1
             style={{
               color: '#FFFFFF',
@@ -290,6 +307,20 @@ export default function AddAssociationPage() {
           >
             Create Association
           </h1>
+          {associationId && (
+            <span
+              style={{
+                padding: '3px 12px',
+                borderRadius: '9999px',
+                fontSize: '13px',
+                fontWeight: 600,
+                background: isPublished ? '#D1FAE5' : '#FEF3C7',
+                color: isPublished ? '#065F46' : '#92400E',
+              }}
+            >
+              {isPublished ? 'Published' : 'Draft'}
+            </span>
+          )}
         </div>
       </div>
 
@@ -487,11 +518,6 @@ export default function AddAssociationPage() {
                     ? 'Publish Now'
                     : 'Save & Next'}
                 </button>
-                {saveError && (
-                  <span style={{ color: '#DC2626', fontSize: '13px', marginLeft: '12px' }}>
-                    {saveError}
-                  </span>
-                )}
               </div>
             </div>
 
@@ -513,19 +539,20 @@ export default function AddAssociationPage() {
                   </p>
 
                   <div style={{ marginBottom: '18px' }}>
-                    <Label
-                      htmlFor="assocName"
-                      style={labelStyle}
-                    >
+                    <Label htmlFor="assocName" style={labelStyle}>
                       Enter Association name *
                     </Label>
                     <Input
                       id="assocName"
                       value={associationName}
                       onChange={(e) => setAssociationName(e.target.value)}
+                      onBlur={() => markTouched('associationName')}
                       className="h-11"
-                      style={inputStyle}
+                      style={{ ...inputStyle, borderColor: fieldErr('associationName', associationName) ? '#DC2626' : '#D7D7D7' }}
                     />
+                    {fieldErr('associationName', associationName) && (
+                      <p style={inlineErr}>{fieldErr('associationName', associationName)}</p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2" style={{ gap: '20px', marginBottom: '18px' }}>
@@ -537,9 +564,13 @@ export default function AddAssociationPage() {
                         id="mgrFirst"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
+                        onBlur={() => markTouched('firstName')}
                         className="h-11"
-                        style={inputStyle}
+                        style={{ ...inputStyle, borderColor: fieldErr('firstName', firstName) ? '#DC2626' : '#D7D7D7' }}
                       />
+                      {fieldErr('firstName', firstName) && (
+                        <p style={inlineErr}>{fieldErr('firstName', firstName)}</p>
+                      )}
                     </div>
                     <div>
                       <Label htmlFor="mgrLast" style={labelStyle}>
@@ -549,9 +580,13 @@ export default function AddAssociationPage() {
                         id="mgrLast"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
+                        onBlur={() => markTouched('lastName')}
                         className="h-11"
-                        style={inputStyle}
+                        style={{ ...inputStyle, borderColor: fieldErr('lastName', lastName) ? '#DC2626' : '#D7D7D7' }}
                       />
+                      {fieldErr('lastName', lastName) && (
+                        <p style={inlineErr}>{fieldErr('lastName', lastName)}</p>
+                      )}
                     </div>
                   </div>
 
@@ -596,6 +631,12 @@ export default function AddAssociationPage() {
                   </div>
                 </div>
 
+                {saveError && (
+                  <div style={{ padding: '0 28px 4px' }}>
+                    <p style={{ color: '#DC2626', fontSize: '13px', margin: 0 }}>{saveError}</p>
+                  </div>
+                )}
+
                 {/* Address block */}
                 <div style={{ borderTop: '1px solid #D7D7D7', padding: '24px 28px 32px' }}>
                   <h3
@@ -630,9 +671,11 @@ export default function AddAssociationPage() {
                         id="zip"
                         value={zip}
                         onChange={(e) => setZip(e.target.value)}
+                        onBlur={() => markTouched('zip')}
                         className="h-11"
-                        style={inputStyle}
+                        style={{ ...inputStyle, borderColor: fieldErr('zip', zip) ? '#DC2626' : '#D7D7D7' }}
                       />
+                      {fieldErr('zip', zip) && <p style={inlineErr}>{fieldErr('zip', zip)}</p>}
                     </div>
                     <div>
                       <Label htmlFor="state" style={labelStyle}>
@@ -642,9 +685,11 @@ export default function AddAssociationPage() {
                         id="state"
                         value={state}
                         onChange={(e) => setState(e.target.value)}
+                        onBlur={() => markTouched('state')}
                         className="h-11"
-                        style={inputStyle}
+                        style={{ ...inputStyle, borderColor: fieldErr('state', state) ? '#DC2626' : '#D7D7D7' }}
                       />
+                      {fieldErr('state', state) && <p style={inlineErr}>{fieldErr('state', state)}</p>}
                     </div>
                   </div>
 
@@ -656,9 +701,11 @@ export default function AddAssociationPage() {
                       id="city"
                       value={city}
                       onChange={(e) => setCity(e.target.value)}
+                      onBlur={() => markTouched('city')}
                       className="h-11"
-                      style={inputStyle}
+                      style={{ ...inputStyle, borderColor: fieldErr('city', city) ? '#DC2626' : '#D7D7D7' }}
                     />
+                    {fieldErr('city', city) && <p style={inlineErr}>{fieldErr('city', city)}</p>}
                   </div>
 
                   <div style={{ marginBottom: '18px' }}>
@@ -903,29 +950,79 @@ export default function AddAssociationPage() {
 
             {active === 3 && (
               <div style={{ padding: '22px 28px 32px' }}>
+                <div className="flex items-center" style={{ marginBottom: '18px', gap: '12px' }}>
+                  <h3 style={{ color: '#102C4A', fontSize: '16px', fontWeight: 600, margin: 0 }}>
+                    Review &amp; Publish
+                  </h3>
+                  <span
+                    style={{
+                      padding: '3px 12px',
+                      borderRadius: '9999px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      background: isPublished ? '#D1FAE5' : '#FEF3C7',
+                      color: isPublished ? '#065F46' : '#92400E',
+                    }}
+                  >
+                    {isPublished ? 'Published' : 'Draft'}
+                  </span>
+                </div>
                 <AssociationDetail
                   name={associationName || 'Association'}
                   address={[address1, address2, city, state, zip, associationEmail, cellPhone || telephone]
                     .filter((v) => v && String(v).trim())
                     .join(', ')}
                   readOnly
-                  placeholderLogo
-                  showBrandingBanner
+                  logoUrl={logoUrl}
+                  placeholderLogo={!logoUrl}
+                  showBrandingBanner={!logoUrl}
+                  invitedBy="Myself"
+                  reserveStudyCount={studies.length}
+                  members={members.map<AssociationDetailMember>((m) => ({
+                    id: m.id,
+                    name: m.name,
+                    role: m.status,
+                    phone: '',
+                    email: m.email,
+                  }))}
+                  studies={studies.map<AssociationDetailStudy>((s) => ({
+                    id: s.id,
+                    name: s.fileName,
+                    uploader: 'Myself',
+                    lastModified: new Date(s.createdAt).toLocaleDateString(),
+                    versions: '1 Founded',
+                    status: 'Active',
+                  }))}
                   onBrandingChoice={(c) => {
                     if (c === 'yes') setLogoOpen(true);
                   }}
                 />
-                <div style={{ marginTop: '20px', color: '#66717D', fontSize: '14px' }}>
-                  {studies.length} reserve stud{studies.length === 1 ? 'y' : 'ies'} · {members.length} member
-                  {members.length === 1 ? '' : 's'}
-                </div>
               </div>
             )}
           </section>
         </div>
       </div>
 
-      <UploadLogoModal open={logoOpen} onClose={() => setLogoOpen(false)} />
+      <UploadLogoModal
+        open={logoOpen}
+        onClose={() => setLogoOpen(false)}
+        onApply={async ({ file }) => {
+          if (!associationId) return;
+          setLogoUploading(true);
+          try {
+            const fd = new FormData();
+            fd.append('associationId', associationId);
+            fd.append('file', file);
+            const res = await fetch('/api/associations/logo', { method: 'POST', body: fd });
+            const data = await res.json();
+            if (res.ok && data.association?.logoFileId) {
+              setLogoUrl(`/api/logo/${data.association.logoFileId}`);
+            }
+          } finally {
+            setLogoUploading(false);
+          }
+        }}
+      />
 
       {mounted && memberOpen &&
         createPortal(
@@ -982,7 +1079,7 @@ export default function AddAssociationPage() {
                       }}
                     />
                     {mTouched.firstName && !mFirst.trim() && (
-                      <p style={fieldErr}>This field is required</p>
+                      <p style={memberErrStyle}>This field is required</p>
                     )}
                   </div>
                   <div>
@@ -1000,7 +1097,7 @@ export default function AddAssociationPage() {
                       }}
                     />
                     {mTouched.lastName && !mLast.trim() && (
-                      <p style={fieldErr}>This field is required</p>
+                      <p style={memberErrStyle}>This field is required</p>
                     )}
                   </div>
                 </div>
@@ -1022,7 +1119,7 @@ export default function AddAssociationPage() {
                       }}
                     />
                     {mTouched.email && !mEmail.trim() && (
-                      <p style={fieldErr}>This field is required</p>
+                      <p style={memberErrStyle}>This field is required</p>
                     )}
                   </div>
                   <div>
@@ -1035,7 +1132,7 @@ export default function AddAssociationPage() {
                       invalid={mTouched.designation && !mDesignation.trim()}
                     />
                     {mTouched.designation && !mDesignation.trim() && (
-                      <p style={fieldErr}>This field is required</p>
+                      <p style={memberErrStyle}>This field is required</p>
                     )}
                   </div>
                 </div>
@@ -1165,10 +1262,17 @@ const modalLabel: React.CSSProperties = {
   display: 'block',
 };
 
-const fieldErr: React.CSSProperties = {
+const memberErrStyle: React.CSSProperties = {
   color: '#DC2626',
   fontSize: '14px',
   marginTop: '4px',
+};
+
+const inlineErr: React.CSSProperties = {
+  color: '#DC2626',
+  fontSize: '13px',
+  marginTop: '4px',
+  marginBottom: 0,
 };
 
 const outlineHeaderBtn: React.CSSProperties = {
