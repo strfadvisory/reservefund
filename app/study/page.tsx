@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, CloudUpload, FileDown, History, FileSpreadsheet } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
@@ -60,7 +60,7 @@ const ITEMS = [
   { no: '03', name: 'Elevator, Hydraulic, Main Ram & Pump Ass..', expected: 20, remaining: 20, cost: '23499' },
 ];
 
-export default function StudyPage() {
+function StudyPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [modelName, setModelName] = useState('');
@@ -251,7 +251,7 @@ export default function StudyPage() {
 
           // Parse items table
           if (headerIndex >= 0) {
-            const parsedItems = [];
+            const parsedItems: Array<{ no: string; name: string; expected: number; remaining: number; cost: string }> = [];
             const newItemTypes: Record<number, string> = {};
             for (let i = headerIndex + 1; i < jsonData.length; i++) {
               const row = jsonData[i];
@@ -954,5 +954,13 @@ export default function StudyPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function StudyPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '64px 32px' }}>Loading...</div>}>
+      <StudyPageContent />
+    </Suspense>
   );
 }
