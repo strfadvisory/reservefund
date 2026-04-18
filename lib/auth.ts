@@ -40,7 +40,7 @@ export async function createSession(userId: string) {
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP_COOKIES !== 'true',
     expires: expiresAt,
     path: '/',
     maxAge: SESSION_TTL_MS / 1000,
