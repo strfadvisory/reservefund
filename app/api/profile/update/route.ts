@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
       companyName,
       website,
       linkedin,
+      telephone,
+      cellPhone,
       zipCode,
       state,
       city,
@@ -26,22 +28,27 @@ export async function POST(request: NextRequest) {
       address2,
     } = body;
 
-    if (!companyName || !zipCode || !state || !city || !address1) {
+    if (!zipCode || !state || !city || !address1) {
       return NextResponse.json({ error: 'Required fields missing' }, { status: 400 });
     }
 
+    const data: Record<string, any> = {
+      zipCode: String(zipCode).trim(),
+      state: String(state).trim(),
+      city: String(city).trim(),
+      address1: String(address1).trim(),
+      address2: address2 ? String(address2).trim() : null,
+      telephone: telephone ? String(telephone).trim() : null,
+      phone: cellPhone ? String(cellPhone).trim() : null,
+    };
+
+    if (companyName !== undefined) data.companyName = companyName ? String(companyName).trim() : null;
+    if (website !== undefined) data.website = website ? String(website).trim() : null;
+    if (linkedin !== undefined) data.linkedin = linkedin ? String(linkedin).trim() : null;
+
     const updated = await prisma.user.update({
       where: { id: user.id },
-      data: {
-        companyName: String(companyName).trim(),
-        website: website ? String(website).trim() : null,
-        linkedin: linkedin ? String(linkedin).trim() : null,
-        zipCode: String(zipCode).trim(),
-        state: String(state).trim(),
-        city: String(city).trim(),
-        address1: String(address1).trim(),
-        address2: address2 ? String(address2).trim() : null,
-      },
+      data,
     });
 
     return NextResponse.json({ ok: true, userId: updated.id });

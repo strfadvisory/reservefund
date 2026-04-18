@@ -74,7 +74,7 @@ type SecondaryNavItem = {
 const PRIMARY_NAV: PrimaryNavItem[] = [
   { key: 'management', label: 'Management Company', icon: Building2 },
   { key: 'bank', label: 'Bank Office', icon: Landmark },
-  { key: 'reserve', label: 'Reserve Study Company', icon: Briefcase },
+  { key: 'reserve', label: 'Reserve Study Provider', icon: Briefcase },
   { key: 'advisor', label: 'Investment Advisor', icon: LineChart },
   { key: 'board', label: 'Board Members', icon: Users },
 ];

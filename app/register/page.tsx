@@ -16,12 +16,13 @@ export default function RegisterPage() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showTerms, setShowTerms] = useState(false);
   const canContinue = !!selectedType && agreedToTerms && !submitting;
 
   const companyTypes = [
     { id: 'management', label: 'Management Company', icon: '/images/source/business.png' },
     { id: 'bank', label: 'Bank Office', icon: '/images/source/teller-female.png' },
-    { id: 'reserve', label: 'Reserve Study Company', icon: '/images/source/inflation.png' },
+    { id: 'reserve', label: 'Reserve Study Provider', icon: '/images/source/inflation.png' },
     { id: 'advisor', label: 'Investor Advisor', icon: '/images/source/advisor.png' },
     { id: 'board', label: 'Board Members', icon: '/images/source/coworking.png' },
     { id: 'other', label: 'Other', icon: '/images/other.svg' },
@@ -106,9 +107,25 @@ export default function RegisterPage() {
                 />
                 <label htmlFor="terms" className="cursor-pointer" style={{ color: '#102C4A' }}>
                   I Agree with{' '}
-                  <Link href="/terms" style={{ color: 'inherit' }}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowTerms(true);
+                    }}
+                    style={{
+                      color: 'inherit',
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
+                      font: 'inherit',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                    }}
+                  >
                     terms and condition
-                  </Link>
+                  </button>
                 </label>
               </div>
 
@@ -142,6 +159,120 @@ export default function RegisterPage() {
           <PageFooter />
         </div>
       </div>
+
+      {showTerms && (
+        <div
+          onClick={() => setShowTerms(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(16, 44, 74, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            zIndex: 50,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white"
+            style={{
+              border: '1px solid #D7D7D7',
+              borderRadius: '7px',
+              maxWidth: '560px',
+              width: '100%',
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div
+              style={{
+                padding: '20px 24px',
+                borderBottom: '1px solid #D7D7D7',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <h2 className="font-semibold" style={{ color: '#102C4A', fontSize: '20px' }}>
+                Terms of Use &amp; Disclaimers
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowTerms(false)}
+                aria-label="Close"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#66717D',
+                  fontSize: '24px',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div
+              style={{
+                padding: '24px',
+                overflowY: 'auto',
+                color: '#102C4A',
+                fontSize: '16px',
+                lineHeight: 1.6,
+              }}
+            >
+              <p style={{ marginBottom: '20px' }}>
+                By using reservefundadvisers.com, you agree to these terms. RFA is a privately
+                owned limited liability company located in St. Petersburg, FL, with offices in
+                Glenview, Il., RFA is a registered investment adviser in the State of Florida and
+                the State of Illinois; we utilize FINRA&rsquo;s systems for regulatory filings.
+              </p>
+              <h3 className="font-semibold" style={{ fontSize: '16px', marginBottom: '6px' }}>
+                No Solicitation
+              </h3>
+              <p style={{ marginBottom: '20px' }}>
+                This website is for informational purposes and does not constitute an offer to sell
+                or a solicitation to purchase any security.
+              </p>
+              <h3 className="font-semibold" style={{ fontSize: '16px', marginBottom: '6px' }}>
+                No Advice
+              </h3>
+              <p style={{ marginBottom: '20px' }}>
+                Information on this site is not intended as investment advice and should not be
+                relied upon for investment decisions.
+              </p>
+              <h3 className="font-semibold" style={{ fontSize: '16px', marginBottom: '6px' }}>
+                Liability
+              </h3>
+              <p>
+                RFA provides this site &quot;as is&quot; and disclaims all warranties to the fullest
+                extent allowed by law.
+              </p>
+            </div>
+            <div style={{ padding: '16px 24px', borderTop: '1px solid #D7D7D7', textAlign: 'right' }}>
+              <button
+                type="button"
+                onClick={() => setShowTerms(false)}
+                className="font-semibold text-white transition-all duration-200 hover:opacity-95"
+                style={{
+                  backgroundColor: '#0E519B',
+                  borderRadius: '7px',
+                  padding: '10px 20px',
+                  fontSize: '16px',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

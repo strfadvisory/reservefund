@@ -15,7 +15,7 @@ import { LeftPanel } from '@/components/left-panel';
 const COMPANY_TYPES: Record<string, { label: string; icon: string }> = {
   management: { label: 'Management Company', icon: '/images/source/business.png' },
   bank: { label: 'Bank Office', icon: '/images/source/teller-female.png' },
-  reserve: { label: 'Reserve Study Company', icon: '/images/source/inflation.png' },
+  reserve: { label: 'Reserve Study Provider', icon: '/images/source/inflation.png' },
   advisor: { label: 'Investor Advisor', icon: '/images/source/advisor.png' },
   board: { label: 'Board Members', icon: '/images/source/coworking.png' },
   other: { label: 'Other', icon: '/images/other.svg' },

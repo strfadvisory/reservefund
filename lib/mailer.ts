@@ -84,6 +84,24 @@ export async function sendExistingUserInviteNotification(
   await getTransporter().sendMail({ from, to, subject, text, html });
 }
 
+export async function sendPasswordResetEmail(to: string, resetLink: string) {
+  const from = `"${process.env.MAIL_FROM_NAME || 'Reserve Fund Advisors'}" <${
+    process.env.MAIL_FROM_ADDRESS || process.env.EMAIL_USER
+  }>`;
+  const subject = 'Reset your password';
+  const text = `Click the link below to reset your password. It expires in 1 hour.\n\n${resetLink}`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#102C4A;padding:24px;">
+      <h2 style="color:#0E519B;margin:0 0 12px;">Reset your password</h2>
+      <p style="font-size:16px;line-height:1.5;">We received a request to reset the password for your account. Click the button below to create a new password. This link expires in 1 hour.</p>
+      <p><a href="${resetLink}" style="display:inline-block;background:#0E519B;color:#fff;text-decoration:none;padding:12px 24px;border-radius:7px;font-weight:600;">Reset Password</a></p>
+      <p style="font-size:14px;color:#66717D;">Or copy this link into your browser:<br/>${resetLink}</p>
+      <p style="font-size:14px;color:#66717D;">If you didn't request this, you can ignore this email.</p>
+    </div>
+  `;
+  await getTransporter().sendMail({ from, to, subject, text, html });
+}
+
 export async function sendInviteDeniedNotification(
   to: string,
   opts: {

@@ -30,6 +30,7 @@ model User {
   lastName       String?
   designation    String?
   phone          String?
+  telephone      String?
   passwordHash   String?
   verified       Boolean   @default(false)
   otpHash        String?
