@@ -13,12 +13,9 @@ export async function GET() {
     allCookies: allCookies.map((c) => ({
       name: c.name,
       value: c.value ? `${c.value.substring(0, 10)}...` : null,
-      httpOnly: c.httpOnly,
-      secure: c.secure,
-      sameSite: c.sameSite,
-      path: c.path,
     })),
     user: user ? { id: user.id, email: user.email } : null,
     nodeEnv: process.env.NODE_ENV,
+    hasSessionCookie: allCookies.some((c) => c.name === 'rf_session'),
   });
 }
