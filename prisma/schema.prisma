@@ -78,6 +78,7 @@ model Invite {
   token      String?  @unique
   status     String   @default("pending")
   linkedUserId String? @db.ObjectId
+  chosenAssociationId String? @db.ObjectId
   designation String?
   permissions Json?
   createdAt  DateTime @default(now())
