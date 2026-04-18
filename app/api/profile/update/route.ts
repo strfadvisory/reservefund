@@ -8,8 +8,11 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getSessionUser();
     if (!user) {
+      console.error('[profile/update] User not authenticated - getSessionUser returned null');
       return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
     }
+
+    console.log('[profile/update] User authenticated:', user.email);
 
     const body = await request.json();
     const {

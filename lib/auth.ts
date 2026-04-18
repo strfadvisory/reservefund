@@ -43,18 +43,34 @@ export async function createSession(userId: string) {
     secure: process.env.NODE_ENV === 'production',
     expires: expiresAt,
     path: '/',
+    maxAge: SESSION_TTL_MS / 1000,
   });
 }
 
 export async function getSessionUser() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+
+  if (!token) {
+    console.warn('No session cookie found');
+    return null;
+  }
+
   const session = await prisma.session.findUnique({
     where: { token },
     include: { user: true },
   });
-  if (!session || session.expiresAt < new Date()) return null;
+
+  if (!session) {
+    console.warn('No session found for token');
+    return null;
+  }
+
+  if (session.expiresAt < new Date()) {
+    console.warn('Session expired');
+    return null;
+  }
+
   return session.user;
 }
 
