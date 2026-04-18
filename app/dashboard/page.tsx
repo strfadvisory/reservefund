@@ -8,6 +8,7 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { UploadLogoModal } from '@/components/upload-logo-modal';
 import { TabSwitcher } from '@/components/tab-switcher';
+import { PendingInviteModal, type PendingInvite } from '@/components/pending-invite-modal';
 import roleMapJson from '@/config.json';
 
 const ROLE_MAP = (roleMapJson as any).roles as Record<string, string>;
@@ -91,6 +92,8 @@ export default function DashboardPage() {
   const [invites, setInvites] = useState<
     { id: string; name: string; email: string; status: string }[]
   >([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [pendingLoaded, setPendingLoaded] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
@@ -110,15 +113,32 @@ export default function DashboardPage() {
       const data = await res.json();
       if (Array.isArray(data?.invites)) {
         setInvites(
-          data.invites.map((i: any) => ({
-            id: i.id,
-            name: `${i.firstName} ${i.lastName}`.trim(),
-            email: i.email,
-            status: i.status === 'linked' ? 'Active' : i.status === 'accepted' ? 'Active' : 'Pending',
-          }))
+          data.invites.map((i: any) => {
+            let status = 'Pending';
+            if (i.status === 'accepted' || i.status === 'linked') status = 'Active';
+            else if (i.status === 'denied') status = 'Denied';
+            else if (i.status === 'awaiting_response' || i.status === 'pending') status = 'Pending';
+            return {
+              id: i.id,
+              name: `${i.firstName} ${i.lastName}`.trim(),
+              email: i.email,
+              status,
+            };
+          })
         );
       }
     } catch {}
+  };
+
+  const fetchPendingInvites = async () => {
+    try {
+      const res = await fetch('/api/invite/pending');
+      const data = await res.json();
+      if (Array.isArray(data?.invites)) {
+        setPendingInvites(data.invites);
+      }
+    } catch {}
+    setPendingLoaded(true);
   };
 
   const fetchStudies = async () => {
@@ -175,6 +195,7 @@ export default function DashboardPage() {
     refreshInvites();
     fetchStudies();
     fetchStats();
+    fetchPendingInvites();
   }, []);
 
   const submitInvite = async () => {
@@ -263,13 +284,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingLoaded) return;
+    if (pendingInvites.length > 0) {
+      setIntroOpen(false);
+      return;
+    }
     if (typeof window !== 'undefined') {
       const isHidden = window.localStorage.getItem('dashboard-invite-intro-hidden');
       setIntroOpen(!isHidden);
     } else {
       setIntroOpen(true);
     }
-  }, []);
+  }, [pendingLoaded, pendingInvites.length]);
 
   useEffect(() => {
     if (!introOpen) return;
@@ -783,6 +812,19 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {pendingLoaded && pendingInvites.length > 0 && (
+        <PendingInviteModal
+          invites={pendingInvites}
+          onAllResolved={() => {
+            setPendingInvites([]);
+            if (typeof window !== 'undefined') {
+              const isHidden = window.localStorage.getItem('dashboard-invite-intro-hidden');
+              setIntroOpen(!isHidden);
+            }
+          }}
+        />
+      )}
 
       {/* Invite Intro Popup */}
       {mounted && introOpen &&
@@ -1387,7 +1429,12 @@ function ListColumn({
             {item.status && (
               <span
                 style={{
-                  color: item.status === 'Active' ? '#12B76A' : '#98A2B3',
+                  color:
+                    item.status === 'Active'
+                      ? '#12B76A'
+                      : item.status === 'Denied'
+                      ? '#DC2626'
+                      : '#98A2B3',
                   fontSize: '13px',
                   fontWeight: 500,
                   flexShrink: 0,
