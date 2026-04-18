@@ -13,9 +13,10 @@ export type UploadLogoModalProps = {
   open: boolean;
   onClose: () => void;
   onApply?: (result: UploadLogoResult) => void;
+  title?: string;
 };
 
-export function UploadLogoModal({ open, onClose, onApply }: UploadLogoModalProps) {
+export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your logo' }: UploadLogoModalProps) {
   const [mounted, setMounted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -139,7 +140,7 @@ export function UploadLogoModal({ open, onClose, onApply }: UploadLogoModalProps
               margin: 0,
             }}
           >
-            Upload your logo
+            {title}
           </h2>
         </div>
 

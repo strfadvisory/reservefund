@@ -170,6 +170,30 @@
     font-size: 16px;
   }
 
+  /* All buttons should have pointer cursor */
+  button,
+  [type="button"],
+  [type="submit"],
+  [type="reset"],
+  [role="button"] {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  [type="button"]:disabled,
+  [type="submit"]:disabled,
+  [type="reset"]:disabled,
+  [role="button"]:disabled {
+    cursor: not-allowed !important;
+  }
+
+  /* Clickable elements */
+  a,
+  label[for],
+  .cursor-pointer {
+    cursor: pointer !important;
+  }
+
   /* Typography - Headings (H1, H2, H3) */
   h1 {
     @apply text-2xl font-semibold text-text-default;
@@ -239,6 +263,20 @@
   @apply text-base font-normal text-text-secondary;
 }
 
+/* Override any inline cursor styles on buttons */
+button[style*="cursor"],
+[type="button"][style*="cursor"],
+[type="submit"][style*="cursor"],
+[type="reset"][style*="cursor"] {
+  cursor: pointer !important;
+}
+
+button[disabled][style*="cursor"],
+[type="button"][disabled][style*="cursor"],
+[type="submit"][disabled][style*="cursor"],
+[type="reset"][disabled][style*="cursor"] {
+  cursor: not-allowed !important;
+}
 
 /* Thin Scrollbar Styles */
 .thin-scrollbar::-webkit-scrollbar {

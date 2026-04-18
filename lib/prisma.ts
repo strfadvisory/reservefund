@@ -6,6 +6,11 @@ export const prisma =
   globalForPrisma.prisma ||
   new PrismaClient({
     log: ['warn', 'error'],
+    datasources: {
+      db: {
+        url: process.env.MONGO_URI,
+      },
+    },
   });
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;

@@ -22,6 +22,7 @@ type Association = {
   managerFirstName?: string;
   managerLastName?: string;
   address?: string;
+  logoFileId?: string;
 };
 
 const SUMMARY_ROWS: {
@@ -343,6 +344,15 @@ export default function StudyPage() {
       return;
     }
 
+    const associationId = selectedIdx !== undefined && associations[selectedIdx]
+      ? associations[selectedIdx].id
+      : null;
+
+    if (!associationId) {
+      setToast({ message: 'Please select an association before saving the study', type: 'error' });
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Merge items with their SIRS values
@@ -350,12 +360,6 @@ export default function StudyPage() {
         ...item,
         sirs: itemTypes[index] || '0',
       }));
-
-      // Get association ID if one is selected
-      let associationId = null;
-      if (selectedIdx !== undefined && associations[selectedIdx]) {
-        associationId = associations[selectedIdx].id;
-      }
 
       console.log('Saving study with:', {
         modelName,
@@ -938,6 +942,7 @@ export default function StudyPage() {
         items={associations.map((a) => ({
           name: a.associationName,
           role: `${a.managerFirstName || ''} ${a.managerLastName || ''}`.trim() || 'Manager',
+          logoFileId: a.logoFileId,
         }))}
       />
 

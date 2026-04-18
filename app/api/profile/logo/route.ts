@@ -46,3 +46,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+    if (!user.logoFileId) {
+      return NextResponse.json({ error: 'No logo to delete' }, { status: 400 });
+    }
+    await deleteLogo(user.logoFileId);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { logoFileId: null },
+    });
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });
+  }
+}

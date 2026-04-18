@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
@@ -18,16 +18,35 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedEmail = window.localStorage.getItem('login-email');
+      const wasRemembered = window.localStorage.getItem('login-remember');
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(wasRemembered === 'true');
+      }
+    }
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim() || submitting) return;
     setSubmitting(true);
     setError('');
     try {
+      if (rememberMe && typeof window !== 'undefined') {
+        window.localStorage.setItem('login-email', email);
+        window.localStorage.setItem('login-remember', 'true');
+      } else if (typeof window !== 'undefined') {
+        window.localStorage.removeItem('login-email');
+        window.localStorage.removeItem('login-remember');
+      }
+
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Login failed');
@@ -93,7 +112,7 @@ export default function LoginPage() {
                   onBlur={() => setTouched((t) => ({ ...t, email: true }))}
                   className="h-11"
                   style={{
-               
+                    borderColor: touched.email && !email.trim() ? '#DC2626' : '#D7D7D7',
                     borderRadius: '7px',
                     fontSize: '16px',
                   }}

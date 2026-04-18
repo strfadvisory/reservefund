@@ -76,3 +76,50 @@ export async function GET() {
   });
   return NextResponse.json({ associations: list });
 }
+
+export async function PATCH() {
+  try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
+
+    // Count associations
+    const associationsCount = await prisma.association.count({
+      where: { userId: user.id },
+    });
+
+    // Count invites (members)
+    const membersCount = await prisma.invite.count({
+      where: { invitedBy: user.id },
+    });
+
+    // Count studies
+    const studiesCount = await prisma.study.count({
+      where: { userId: user.id },
+    });
+
+    // For versions, count total items across all studies
+    const studies = await prisma.study.findMany({
+      where: { userId: user.id },
+      select: { items: true },
+    });
+
+    let versionsCount = 0;
+    studies.forEach((study: any) => {
+      if (Array.isArray(study.items)) {
+        versionsCount += study.items.length;
+      }
+    });
+
+    return NextResponse.json({
+      associations: associationsCount,
+      members: membersCount,
+      studies: studiesCount,
+      versions: versionsCount,
+    });
+  } catch (error: any) {
+    console.error('Error fetching dashboard stats:', error);
+    return NextResponse.json({ error: error.message || 'Failed to fetch stats' }, { status: 500 });
+  }
+}

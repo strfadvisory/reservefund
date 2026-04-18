@@ -3,9 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { FolderPlus, Play, Search, Upload, UserCircle2, UserPlus, X } from 'lucide-react';
+import { FolderPlus, Play, Search, Trash2, Upload, UserCircle2, UserPlus, X } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
+import { UploadLogoModal } from '@/components/upload-logo-modal';
 import { TabSwitcher } from '@/components/tab-switcher';
 import roleMapJson from '@/config.json';
 
@@ -81,6 +82,9 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState('');
   const [addressLine, setAddressLine] = useState('');
   const [roleLabel, setRoleLabel] = useState('Reserve Specialist');
+  const [logoFileId, setLogoFileId] = useState<string | null>(null);
+  const [avatarUploadOpen, setAvatarUploadOpen] = useState(false);
+  const [avatarHovered, setAvatarHovered] = useState(false);
   const [associations, setAssociations] = useState<
     { id: string; name: string; sub: string; status: string }[]
   >([]);
@@ -93,6 +97,12 @@ export default function DashboardPage() {
   const [studies, setStudies] = useState<
     { id: string; name: string; sub: string }[]
   >([]);
+  const [stats, setStats] = useState({
+    associations: 0,
+    members: 0,
+    studies: 0,
+    versions: 0,
+  });
 
   const refreshInvites = async () => {
     try {
@@ -144,9 +154,27 @@ export default function DashboardPage() {
     }
   };
 
+  const fetchStats = async () => {
+    try {
+      const res = await fetch('/api/associations', { method: 'PATCH' });
+      const data = await res.json();
+      if (res.ok && data) {
+        setStats({
+          associations: data.associations || 0,
+          members: data.members || 0,
+          studies: data.studies || 0,
+          versions: data.versions || 0,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
   useEffect(() => {
     refreshInvites();
     fetchStudies();
+    fetchStats();
   }, []);
 
   const submitInvite = async () => {
@@ -225,6 +253,7 @@ export default function DashboardPage() {
         if (u.companyType && ROLE_MAP[u.companyType]) {
           setRoleLabel(ROLE_MAP[u.companyType]);
         }
+        if (u.logoFileId) setLogoFileId(u.logoFileId);
       })
       .catch(() => {});
     return () => {
@@ -234,7 +263,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setMounted(true);
-    setIntroOpen(true);
+    if (typeof window !== 'undefined') {
+      const isHidden = window.localStorage.getItem('dashboard-invite-intro-hidden');
+      setIntroOpen(!isHidden);
+    } else {
+      setIntroOpen(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -288,7 +322,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
-      <DashboardHeader role="Super Admin" />
+      <DashboardHeader role={roleLabel} />
 
       {/* Hero section */}
       <div
@@ -330,10 +364,10 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center">
             {[
-              { value: '20', label: 'Associations' },
-              { value: '20', label: 'Members' },
-              { value: '04', label: 'Study Data' },
-              { value: '23', label: 'Versions' },
+              { value: String(stats.associations), label: 'Associations' },
+              { value: String(stats.members), label: 'Members' },
+              { value: String(stats.studies).padStart(2, '0'), label: 'Study Data' },
+              { value: String(stats.versions), label: 'Versions' },
             ].map((stat, idx, arr) => (
               <div
                 key={stat.label}
@@ -396,6 +430,7 @@ export default function DashboardPage() {
         >
           {/* Column 1: Role & Responsibility */}
           <div
+          id='userprofile'
             style={{
               borderRight: '1px solid #D7D7D7',
               display: 'flex',
@@ -422,16 +457,52 @@ export default function DashboardPage() {
               }}
             >
               <div
-                className="flex items-center justify-center"
-                style={{
-                  width: '56px',
-                  height: '56px',
-                  borderRadius: '10px',
-                  background: '#F1F4F9',
-                  marginBottom: '18px',
-                }}
+                style={{ position: 'relative', width: '56px', height: '56px', marginBottom: '18px', cursor: 'pointer' }}
+                onClick={() => setAvatarUploadOpen(true)}
+                onMouseEnter={() => setAvatarHovered(true)}
+                onMouseLeave={() => setAvatarHovered(false)}
               >
-                <UserCircle2 className="w-7 h-7" style={{ color: '#66717D' }} />
+                {logoFileId ? (
+                  <img
+                    src={`/api/profile/logo/${logoFileId}`}
+                    alt="Profile"
+                    style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    className="flex items-center justify-center"
+                    style={{ width: '56px', height: '56px', borderRadius: '10px', background: '#F1F4F9' }}
+                  >
+                    <UserCircle2 className="w-7 h-7" style={{ color: '#66717D' }} />
+                  </div>
+                )}
+                {logoFileId && avatarHovered && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fetch('/api/profile/logo', { method: 'DELETE' }).then((r) => {
+                        if (r.ok) setLogoFileId(null);
+                      });
+                    }}
+                    style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      right: '-8px',
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '9999px',
+                      background: '#DC2626',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Trash2 className="w-3 h-3 text-white" />
+                  </button>
+                )}
               </div>
               <div
                 style={{
@@ -441,7 +512,7 @@ export default function DashboardPage() {
                   marginBottom: '8px',
                 }}
               >
-                Super Admin
+                {roleLabel}
               </div>
               <p
                 style={{
@@ -513,8 +584,9 @@ export default function DashboardPage() {
               secondary: r.sub,
             }))}
             cta="Upload Reserver Study"
-            ctaIcon={<Upload className="w-5 h-5" style={{ color: '#66717D' }} />}
+            ctaIcon={<Upload className="w-5 h-5" style={{ color: associations.length === 0 ? '#98A2B3' : '#66717D' }} />}
             noBorder
+            ctaDisabled={associations.length === 0}
             onCtaClick={() => router.push('/study?selectAssociation=1')}
           />
         </div>
@@ -1106,6 +1178,20 @@ export default function DashboardPage() {
           document.body
         )}
 
+      {/* Avatar Upload Modal */}
+      <UploadLogoModal
+        open={avatarUploadOpen}
+        title="Upload your profile image"
+        onClose={() => setAvatarUploadOpen(false)}
+        onApply={async ({ file }) => {
+          const form = new FormData();
+          form.append('file', file);
+          const res = await fetch('/api/profile/logo', { method: 'POST', body: form });
+          const data = await res.json();
+          if (res.ok) setLogoFileId(data.logoFileId);
+        }}
+      />
+
       {/* Upload Reserver Study Modal */}
       <UploadReserveStudyModal
         open={uploadOpen}
@@ -1209,6 +1295,7 @@ function ListColumn({
   cta,
   ctaIcon,
   noBorder,
+  ctaDisabled,
   onCtaClick,
 }: {
   title: string;
@@ -1216,6 +1303,7 @@ function ListColumn({
   cta: string;
   ctaIcon?: React.ReactNode;
   noBorder?: boolean;
+  ctaDisabled?: boolean;
   onCtaClick?: () => void;
 }) {
   return (
@@ -1252,6 +1340,22 @@ function ListColumn({
           scrollbarColor: '#D7D7D7 transparent',
         }}
       >
+        {items.length === 0 && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minHeight: '160px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ color: '#66717D', fontSize: '14px', margin: 0 }}>
+              No data available for {title}
+            </p>
+          </div>
+        )}
         {items.map((item, idx) => (
           <div key={idx} className="flex items-start justify-between" style={{ gap: '12px' }}>
             <div style={{ minWidth: 0, flex: 1 }}>
@@ -1297,21 +1401,23 @@ function ListColumn({
       </div>
       <button
         type="button"
-        onClick={onCtaClick}
+        onClick={ctaDisabled ? undefined : onCtaClick}
+        disabled={ctaDisabled}
         className="flex items-center justify-center"
         style={{
           gap: '10px',
           padding: '16px',
           borderTop: '1px solid #D7D7D7',
           background: '#fff',
-          color: '#102C4A',
+          color: ctaDisabled ? '#98A2B3' : '#102C4A',
           fontSize: '15px',
           fontWeight: 500,
-          cursor: 'pointer',
+          cursor: ctaDisabled ? 'not-allowed' : 'pointer',
           border: 'none',
           borderTopWidth: '1px',
           borderTopStyle: 'solid',
           borderTopColor: '#D7D7D7',
+          opacity: ctaDisabled ? 0.6 : 1,
         }}
       >
         {ctaIcon}

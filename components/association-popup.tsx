@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 export type AssociationItem = {
   name: string;
   role: string;
+  logoFileId?: string;
 };
 
 export type AssociationPopupProps = {
@@ -116,16 +117,31 @@ export function AssociationPopup({
                 onClick={() => handleSelect(idx)}
               >
                 <div className="flex items-center" style={{ gap: '16px', minWidth: 0, flex: 1 }}>
-                  <div
-                    style={{
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '10px',
-                      flexShrink: 0,
-                      background:
-                        'conic-gradient(from 45deg, #F59E0B, #EF4444, #EC4899, #8B5CF6, #3B82F6, #10B981, #F59E0B)',
-                    }}
-                  />
+                  {item.logoFileId ? (
+                    <img
+                      src={`/api/logo/${item.logoFileId}`}
+                      alt={item.name}
+                      style={{ width: '52px', height: '52px', borderRadius: '10px', objectFit: 'cover', flexShrink: 0 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '10px',
+                        flexShrink: 0,
+                        background: '#F1F4F9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#66717D',
+                        fontSize: '18px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      {item.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
                   <div style={{ minWidth: 0 }}>
                     <div
                       className="font-semibold"
