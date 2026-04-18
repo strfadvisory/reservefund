@@ -1,7 +1,14 @@
 import { randomBytes } from 'crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 import { hashPassword, verifyPassword } from '@/lib/auth';
+
+async function isRequestHttps(): Promise<boolean> {
+  const hdrs = await headers();
+  const proto = hdrs.get('x-forwarded-proto');
+  if (proto) return proto.split(',')[0].trim().toLowerCase() === 'https';
+  return false;
+}
 
 export const ADMIN_SESSION_COOKIE = 'rf_admin_session';
 export const ADMIN_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 14;
@@ -34,10 +41,11 @@ export async function createAdminSession(adminId: string) {
   const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS);
   await prisma.adminSession.create({ data: { token, adminId, expiresAt } });
   const jar = await cookies();
+  const secure = await isRequestHttps();
   jar.set(ADMIN_SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure,
     expires: expiresAt,
     path: '/',
   });

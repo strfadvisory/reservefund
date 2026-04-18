@@ -1,5 +1,5 @@
 import { randomBytes, scryptSync, timingSafeEqual, createHash } from 'crypto';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import prisma from '@/lib/prisma';
 
 export const SESSION_COOKIE = 'rf_session';
@@ -32,15 +32,23 @@ export function hashOtp(otp: string): string {
   return createHash('sha256').update(otp).digest('hex');
 }
 
+async function isRequestHttps(): Promise<boolean> {
+  const hdrs = await headers();
+  const proto = hdrs.get('x-forwarded-proto');
+  if (proto) return proto.split(',')[0].trim().toLowerCase() === 'https';
+  return false;
+}
+
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
   await prisma.session.create({ data: { token, userId, expiresAt } });
   const jar = await cookies();
+  const secure = await isRequestHttps();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production' && process.env.FORCE_HTTP_COOKIES !== 'true',
+    secure,
     expires: expiresAt,
     path: '/',
     maxAge: SESSION_TTL_MS / 1000,
