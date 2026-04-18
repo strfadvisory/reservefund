@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { FolderPlus, Play, Search, Trash2, Upload, UserCircle2, UserPlus, X } from 'lucide-react';
@@ -8,40 +8,27 @@ import { DashboardHeader } from '@/components/dashboard-header';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
 import { UploadLogoModal } from '@/components/upload-logo-modal';
 import { TabSwitcher } from '@/components/tab-switcher';
-import { PendingInviteModal, type PendingInvite } from '@/components/pending-invite-modal';
-import roleMapJson from '@/config.json';
-
-const ROLE_MAP = (roleMapJson as any).roles as Record<string, string>;
+import { PendingInviteModal, getResolvedInviteIds, type PendingInvite } from '@/components/pending-invite-modal';
+import { useOrg } from '@/components/org-context';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 
-const PROPERTY_MANAGERS = [
-  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
-  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
-  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
-    { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Pending' },
-  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
-  { name: 'Mical Jordan', email: 'info@micaljordan.com', status: 'Active' },
-];
+type MemberRow = { primary: string; secondary: string; status?: string };
+type AssociationRow = { id: string; name: string; sub: string; status: string };
+type StudyRow = { id: string; name: string; sub: string };
 
-const ASSOCIATIONS = [
-  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Pending' },
-  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
-  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
-    { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Pending' },
-  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
-  { name: 'Caldron Associations', sub: 'Mical Jordan', status: 'Active' },
-];
-
-const RESERVE_STUDIES = [
-  { name: 'Caldron Reserve Study', sub: 'Associations name' },
-  { name: 'Caldron Reserve Study', sub: 'Associations name' },
-  { name: 'Caldron Reserve Study', sub: 'Associations name' },
-    { name: 'Caldron Reserve Study', sub: 'Associations name' },
-  { name: 'Caldron Reserve Study', sub: 'Associations name' },
-  { name: 'Caldron Reserve Study', sub: 'Associations name' },
-];
+type DashboardData = {
+  hero: { addressLine: string };
+  roleColumn: { logoFileId: string | null; roleLabel: string; description: string };
+  members: MemberRow[];
+  associations: AssociationRow[];
+  studies: StudyRow[];
+  stats: { associations: number; members: number; studies: number; versions: number };
+  canInviteMembers: boolean;
+  canAddAssociation: boolean;
+  canUploadStudy: boolean;
+};
 
 const GUIDES = [
   {
@@ -66,6 +53,7 @@ const FILTERS = ['Today', 'Yesterday', 'Last 7 Days', 'This Month'];
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { selectedOrgId, isSelfOrg } = useOrg();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -81,122 +69,48 @@ export default function DashboardPage() {
   const [dontShowIntro, setDontShowIntro] = useState(false);
   const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
   const [userName, setUserName] = useState('');
-  const [addressLine, setAddressLine] = useState('');
-  const [roleLabel, setRoleLabel] = useState('Reserve Specialist');
-  const [logoFileId, setLogoFileId] = useState<string | null>(null);
+  const [data, setData] = useState<DashboardData | null>(null);
   const [avatarUploadOpen, setAvatarUploadOpen] = useState(false);
   const [avatarHovered, setAvatarHovered] = useState(false);
-  const [associations, setAssociations] = useState<
-    { id: string; name: string; sub: string; status: string }[]
-  >([]);
-  const [invites, setInvites] = useState<
-    { id: string; name: string; email: string; status: string }[]
-  >([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [pendingLoaded, setPendingLoaded] = useState(false);
   const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteError, setInviteError] = useState('');
-  const [studies, setStudies] = useState<
-    { id: string; name: string; sub: string }[]
-  >([]);
-  const [stats, setStats] = useState({
-    associations: 0,
-    members: 0,
-    studies: 0,
-    versions: 0,
-  });
 
-  const refreshInvites = async () => {
+  const fetchDashboard = useCallback(async () => {
     try {
-      const res = await fetch('/api/invite');
-      const data = await res.json();
-      if (Array.isArray(data?.invites)) {
-        setInvites(
-          data.invites.map((i: any) => {
-            let status = 'Pending';
-            if (i.status === 'accepted' || i.status === 'linked') status = 'Active';
-            else if (i.status === 'denied') status = 'Denied';
-            else if (i.status === 'awaiting_response' || i.status === 'pending') status = 'Pending';
-            return {
-              id: i.id,
-              name: `${i.firstName} ${i.lastName}`.trim(),
-              email: i.email,
-              status,
-            };
-          })
-        );
+      const res = await fetch(`/api/dashboard?orgId=${encodeURIComponent(selectedOrgId)}`);
+      const body = await res.json();
+      if (!res.ok) {
+        console.error('Failed to load dashboard:', body?.error);
+        return;
       }
-    } catch {}
-  };
+      setData(body as DashboardData);
+    } catch (error) {
+      console.error('Failed to fetch dashboard:', error);
+    }
+  }, [selectedOrgId]);
 
   const fetchPendingInvites = async () => {
     try {
-      const res = await fetch('/api/invite/pending');
-      const data = await res.json();
-      if (Array.isArray(data?.invites)) {
-        setPendingInvites(data.invites);
+      const res = await fetch('/api/invite/pending', { cache: 'no-store' });
+      const body = await res.json();
+      if (Array.isArray(body?.invites)) {
+        const resolvedIds = new Set(getResolvedInviteIds());
+        setPendingInvites(body.invites.filter((inv: PendingInvite) => !resolvedIds.has(inv.id)));
       }
     } catch {}
     setPendingLoaded(true);
   };
 
-  const fetchStudies = async () => {
-    try {
-      const res = await fetch('/api/studies');
-      const data = await res.json();
-      if (res.status === 401) {
-        console.error('Not authenticated');
-        return;
-      }
-      if (Array.isArray(data?.studies)) {
-        // Fetch associations to map IDs to names
-        const assocRes = await fetch('/api/associations');
-        const assocData = await assocRes.json();
-        const associationsMap: Record<string, string> = {};
-        
-        if (Array.isArray(assocData?.associations)) {
-          assocData.associations.forEach((a: any) => {
-            associationsMap[a.id] = a.associationName;
-          });
-        }
-
-        setStudies(
-          data.studies.map((s: any) => ({
-            id: s.id,
-            name: s.modelName,
-            sub: s.associationId ? (associationsMap[s.associationId] || 'Unknown Association') : 'No Association',
-          }))
-        );
-      }
-    } catch (error) {
-      console.error('Failed to fetch studies:', error);
-    }
-  };
-
-  const fetchStats = async () => {
-    try {
-      const res = await fetch('/api/associations', { method: 'PATCH' });
-      const data = await res.json();
-      if (res.ok && data) {
-        setStats({
-          associations: data.associations || 0,
-          members: data.members || 0,
-          studies: data.studies || 0,
-          versions: data.versions || 0,
-        });
-      }
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-    }
-  };
-
   useEffect(() => {
-    refreshInvites();
-    fetchStudies();
-    fetchStats();
     fetchPendingInvites();
   }, []);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
 
   const submitInvite = async () => {
     markTouched('firstName');
@@ -212,10 +126,10 @@ export default function DashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ firstName, lastName, email }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to invite');
-      setInviteMessage(data.linked ? 'User already exists — added to your list.' : 'Invitation email sent.');
-      await refreshInvites();
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || 'Failed to invite');
+      setInviteMessage(body.linked ? 'User already exists — added to your list.' : 'Invitation email sent.');
+      await fetchDashboard();
       setTimeout(() => closeInvite(), 800);
     } catch (e: any) {
       setInviteError(e.message);
@@ -226,55 +140,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/associations')
-      .then((r) => r.json())
-      .then((data) => {
-        if (cancelled) return;
-        const list = Array.isArray(data?.associations) ? data.associations : [];
-        setAssociations(
-          list.map((a: any) => ({
-            id: a.id,
-            name: a.associationName,
-            sub:
-              [a.managerFirstName, a.managerLastName].filter(Boolean).join(' ') ||
-              a.city ||
-              '',
-            status: a.published ? 'Active' : 'Pending',
-          }))
-        );
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((data) => {
+      .then((body) => {
         if (cancelled) return;
-        const u = data?.user;
+        const u = body?.user;
         if (!u) return;
         const name = [u.firstName, u.lastName].filter(Boolean).join(' ').trim();
         if (name) setUserName(name);
-        const stateZip = [u.state, u.zipCode].filter(Boolean).join(' ').trim();
-        const addr = [
-          u.companyName,
-          u.address1,
-          u.address2,
-          u.city,
-          stateZip,
-        ]
-          .map((p) => (p ? String(p).trim() : ''))
-          .filter(Boolean)
-          .join(', ');
-        if (addr) setAddressLine(addr);
-        if (u.companyType && ROLE_MAP[u.companyType]) {
-          setRoleLabel(ROLE_MAP[u.companyType]);
-        }
-        if (u.logoFileId) setLogoFileId(u.logoFileId);
       })
       .catch(() => {});
     return () => {
@@ -349,9 +222,21 @@ export default function DashboardPage() {
     setInviteMessage('');
   };
 
+  const roleLabel = data?.roleColumn.roleLabel || 'Member';
+  const logoFileId = data?.roleColumn.logoFileId || null;
+  const description = data?.roleColumn.description || '';
+  const addressLine = data?.hero.addressLine || '';
+  const stats = data?.stats || { associations: 0, members: 0, studies: 0, versions: 0 };
+  const members = data?.members || [];
+  const associations = data?.associations || [];
+  const studies = data?.studies || [];
+  const canInviteMembers = data?.canInviteMembers ?? false;
+  const canAddAssociation = data?.canAddAssociation ?? false;
+  const canUploadStudy = data?.canUploadStudy ?? false;
+
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
-      <DashboardHeader role={roleLabel} />
+      <DashboardHeader />
 
       {/* Hero section */}
       <div
@@ -486,8 +371,8 @@ export default function DashboardPage() {
               }}
             >
               <div
-                style={{ position: 'relative', width: '56px', height: '56px', marginBottom: '18px', cursor: 'pointer' }}
-                onClick={() => setAvatarUploadOpen(true)}
+                style={{ position: 'relative', width: '56px', height: '56px', marginBottom: '18px', cursor: isSelfOrg ? 'pointer' : 'default' }}
+                onClick={isSelfOrg ? () => setAvatarUploadOpen(true) : undefined}
                 onMouseEnter={() => setAvatarHovered(true)}
                 onMouseLeave={() => setAvatarHovered(false)}
               >
@@ -505,13 +390,13 @@ export default function DashboardPage() {
                     <UserCircle2 className="w-7 h-7" style={{ color: '#66717D' }} />
                   </div>
                 )}
-                {logoFileId && avatarHovered && (
+                {isSelfOrg && logoFileId && avatarHovered && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       fetch('/api/profile/logo', { method: 'DELETE' }).then((r) => {
-                        if (r.ok) setLogoFileId(null);
+                        if (r.ok) fetchDashboard();
                       });
                     }}
                     style={{
@@ -552,7 +437,7 @@ export default function DashboardPage() {
                   flex: 1,
                 }}
               >
-                You can manage associations, members and study data behalf of your company
+                {description || 'You can manage associations, members and study data behalf of your company'}
               </p>
             </div>
             <button
@@ -579,17 +464,14 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Column 2: Role label per companyType (from config.json) */}
+          {/* Column 2: Members */}
           <ListColumn
             title={roleLabel}
-            items={invites.map((pm) => ({
-              primary: pm.name,
-              secondary: pm.email,
-              status: pm.status,
-            }))}
+            items={members}
             cta="Invite New"
             ctaIcon={<UserPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
             onCtaClick={() => setInviteOpen(true)}
+            ctaHidden={!canInviteMembers}
           />
 
           {/* Column 3: Associations */}
@@ -603,6 +485,7 @@ export default function DashboardPage() {
             cta="Add Associations"
             ctaIcon={<FolderPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
             onCtaClick={() => router.push('/add-association')}
+            ctaHidden={!canAddAssociation}
           />
 
           {/* Column 4: Reserver Study */}
@@ -616,6 +499,7 @@ export default function DashboardPage() {
             ctaIcon={<Upload className="w-5 h-5" style={{ color: associations.length === 0 ? '#98A2B3' : '#66717D' }} />}
             noBorder
             ctaDisabled={associations.length === 0}
+            ctaHidden={!canUploadStudy}
             onCtaClick={() => router.push('/study?selectAssociation=1')}
           />
         </div>
@@ -1229,8 +1113,7 @@ export default function DashboardPage() {
           const form = new FormData();
           form.append('file', file);
           const res = await fetch('/api/profile/logo', { method: 'POST', body: form });
-          const data = await res.json();
-          if (res.ok) setLogoFileId(data.logoFileId);
+          if (res.ok) await fetchDashboard();
         }}
       />
 
@@ -1338,6 +1221,7 @@ function ListColumn({
   ctaIcon,
   noBorder,
   ctaDisabled,
+  ctaHidden,
   onCtaClick,
 }: {
   title: string;
@@ -1346,6 +1230,7 @@ function ListColumn({
   ctaIcon?: React.ReactNode;
   noBorder?: boolean;
   ctaDisabled?: boolean;
+  ctaHidden?: boolean;
   onCtaClick?: () => void;
 }) {
   return (
@@ -1446,30 +1331,41 @@ function ListColumn({
           </div>
         ))}
       </div>
-      <button
-        type="button"
-        onClick={ctaDisabled ? undefined : onCtaClick}
-        disabled={ctaDisabled}
-        className="flex items-center justify-center"
-        style={{
-          gap: '10px',
-          padding: '16px',
-          borderTop: '1px solid #D7D7D7',
-          background: '#fff',
-          color: ctaDisabled ? '#98A2B3' : '#102C4A',
-          fontSize: '15px',
-          fontWeight: 500,
-          cursor: ctaDisabled ? 'not-allowed' : 'pointer',
-          border: 'none',
-          borderTopWidth: '1px',
-          borderTopStyle: 'solid',
-          borderTopColor: '#D7D7D7',
-          opacity: ctaDisabled ? 0.6 : 1,
-        }}
-      >
-        {ctaIcon}
-        {cta}
-      </button>
+      {ctaHidden ? (
+        <div
+          style={{
+            padding: '16px',
+            borderTop: '1px solid #D7D7D7',
+            background: '#fff',
+            minHeight: '56px',
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={ctaDisabled ? undefined : onCtaClick}
+          disabled={ctaDisabled}
+          className="flex items-center justify-center"
+          style={{
+            gap: '10px',
+            padding: '16px',
+            borderTop: '1px solid #D7D7D7',
+            background: '#fff',
+            color: ctaDisabled ? '#98A2B3' : '#102C4A',
+            fontSize: '15px',
+            fontWeight: 500,
+            cursor: ctaDisabled ? 'not-allowed' : 'pointer',
+            border: 'none',
+            borderTopWidth: '1px',
+            borderTopStyle: 'solid',
+            borderTopColor: '#D7D7D7',
+            opacity: ctaDisabled ? 0.6 : 1,
+          }}
+        >
+          {ctaIcon}
+          {cta}
+        </button>
+      )}
     </div>
   );
 }

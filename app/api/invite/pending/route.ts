@@ -4,6 +4,7 @@ import { getSessionUser } from '@/lib/auth';
 import config from '@/config.json';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 const ROLES = (config as any).roles as Record<string, string>;
 

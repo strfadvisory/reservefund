@@ -5,23 +5,7 @@ import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, UserCircle2, ChevronDown, LogOut } from 'lucide-react';
-import roleMapJson from '@/config.json';
-
-const roleMap: Record<string, string> = (roleMapJson as any).roles as Record<string, string>;
-
-const companyTypeLabels: Record<string, string> = {
-  management: 'Management Company',
-  bank: 'Bank Office',
-  reserve: 'Reserve Study Company',
-  advisor: 'Investor Advisor',
-  board: 'Board Members',
-  other: 'Other',
-};
-
-const NEXT_STEP_ITEMS = Array.from({ length: 6 }).map(() => ({
-  name: 'Apex Global Association Solutions',
-  role: 'Onside Manager',
-}));
+import { useOrg } from '@/components/org-context';
 
 const NAV_ITEMS: { label: string; href: string; match: string[] }[] = [
   { label: 'Dashboard', href: '/dashboard', match: ['/dashboard', '/study'] },
@@ -43,14 +27,12 @@ export function DashboardHeader({
 }: DashboardHeaderProps) {
   const pathname = usePathname() || '';
   const router = useRouter();
+  const { orgs, orgsLoaded, selectedOrgId, selectedOrg, setSelectedOrgId } = useOrg();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [selectedIdx, setSelectedIdx] = useState(2);
   const [mounted, setMounted] = useState(false);
   const [logoSrc, setLogoSrc] = useState<string>('/images/clogo.png');
-  const [companyName, setCompanyName] = useState<string | null>(null);
-  const [roleName, setRoleName] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -65,8 +47,6 @@ export function DashboardHeader({
         const u = data?.user;
         if (!u) return;
         if (u.logoFileId) setLogoSrc(`/api/profile/logo/${u.logoFileId}`);
-        if (u.companyName) setCompanyName(u.companyName);
-        if (u.companyType && companyTypeLabels[u.companyType]) setRoleName(companyTypeLabels[u.companyType]);
       })
       .catch(() => {});
     return () => {
@@ -101,6 +81,11 @@ export function DashboardHeader({
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  const handleSelectOrg = (id: string) => {
+    setSelectedOrgId(id);
+    setOpen(false);
+  };
 
   return (
     <>
@@ -144,10 +129,10 @@ export function DashboardHeader({
             className="flex items-center"
             style={{ gap: '6px', color: '#FFFFFF', fontSize: '16px', fontWeight: 600 }}
           >
-            {companyName || company}
+            {selectedOrg?.name || company}
             <ChevronDown className="w-4 h-4" style={{ color: '#FFFFFF' }} />
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{roleName || role}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{selectedOrg?.roleLabel || role}</div>
         </button>
       </div>
 
@@ -304,11 +289,21 @@ export function DashboardHeader({
 
             {/* Body */}
             <div style={{ padding: '8px 0' }}>
-              {NEXT_STEP_ITEMS.map((item, idx) => {
-                const isSelected = idx === selectedIdx;
+              {!orgsLoaded && (
+                <div style={{ padding: '32px', textAlign: 'center', color: '#66717D', fontSize: '14px' }}>
+                  Loading…
+                </div>
+              )}
+              {orgsLoaded && orgs.length === 0 && (
+                <div style={{ padding: '32px', textAlign: 'center', color: '#66717D', fontSize: '14px' }}>
+                  No organizations available.
+                </div>
+              )}
+              {orgsLoaded && orgs.map((item) => {
+                const isSelected = item.id === (selectedOrg?.id ?? selectedOrgId);
                 return (
                   <div
-                    key={idx}
+                    key={item.id}
                     className="flex items-center justify-between"
                     style={{
                       padding: '16px 32px',
@@ -323,10 +318,26 @@ export function DashboardHeader({
                           height: '52px',
                           borderRadius: '10px',
                           flexShrink: 0,
-                          background:
-                            'conic-gradient(from 45deg, #F59E0B, #EF4444, #EC4899, #8B5CF6, #3B82F6, #10B981, #F59E0B)',
+                          overflow: 'hidden',
+                          background: '#F1F4F9',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
                         }}
-                      />
+                      >
+                        {item.logoFileId ? (
+                          <img
+                            src={`/api/profile/logo/${item.logoFileId}`}
+                            alt={item.name}
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+                            style={{ width: '52px', height: '52px', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <span style={{ color: '#102C4A', fontSize: '20px', fontWeight: 700 }}>
+                            {item.name.charAt(0).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ minWidth: 0 }}>
                         <div
                           className="font-semibold"
@@ -340,16 +351,13 @@ export function DashboardHeader({
                           {item.name}
                         </div>
                         <div style={{ color: '#66717D', fontSize: '14px' }}>
-                          {item.role}
+                          {item.roleLabel}
                         </div>
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedIdx(idx);
-                        setOpen(false);
-                      }}
+                      onClick={() => handleSelectOrg(item.id)}
                       style={{
                         flexShrink: 0,
                         padding: '10px 24px',

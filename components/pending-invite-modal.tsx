@@ -26,6 +26,30 @@ export type PendingInvite = {
 
 type Phase = 'choose' | 'pickAssociation';
 
+const RESOLVED_INVITES_KEY = 'rf-resolved-invite-ids';
+
+function markInviteResolved(id: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.localStorage.getItem(RESOLVED_INVITES_KEY);
+    const current: string[] = raw ? JSON.parse(raw) : [];
+    if (!current.includes(id)) {
+      current.push(id);
+      window.localStorage.setItem(RESOLVED_INVITES_KEY, JSON.stringify(current));
+    }
+  } catch {}
+}
+
+export function getResolvedInviteIds(): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(RESOLVED_INVITES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export function PendingInviteModal({
   invites,
   onAllResolved,
@@ -75,7 +99,15 @@ export function PendingInviteModal({
         body: JSON.stringify(body),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed');
+      if (!res.ok) {
+        if (res.status === 409) {
+          markInviteResolved(current.id);
+          advance();
+          return;
+        }
+        throw new Error(data.error || 'Failed');
+      }
+      markInviteResolved(current.id);
       advance();
     } catch (e: any) {
       setError(e.message);
