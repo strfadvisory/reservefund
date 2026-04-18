@@ -56,3 +56,54 @@ export async function sendOtpEmail(to: string, otp: string) {
   `;
   await getTransporter().sendMail({ from, to, subject, text, html });
 }
+
+export async function sendExistingUserInviteNotification(
+  to: string,
+  opts: {
+    inviteeFirstName: string;
+    inviterName: string;
+    companyName: string;
+    roleLabel: string;
+    loginUrl: string;
+  }
+) {
+  const from = `"${process.env.MAIL_FROM_NAME || 'Reserve Fund Advisors'}" <${
+    process.env.MAIL_FROM_ADDRESS || process.env.EMAIL_USER
+  }>`;
+  const subject = `${opts.inviterName} invited you to join ${opts.companyName}`;
+  const text = `${opts.inviterName} (${opts.companyName}) has invited you to join as ${opts.roleLabel}. Log in to respond: ${opts.loginUrl}`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#102C4A;padding:24px;">
+      <h2 style="color:#0E519B;margin:0 0 12px;">Hi ${opts.inviteeFirstName},</h2>
+      <p style="font-size:16px;line-height:1.5;">${opts.inviterName} (${opts.companyName}) has invited you to join as <strong>${opts.roleLabel}</strong>.</p>
+      <p style="font-size:16px;line-height:1.5;">Log in to your account to accept or decline this request.</p>
+      <p><a href="${opts.loginUrl}" style="display:inline-block;background:#0E519B;color:#fff;text-decoration:none;padding:12px 24px;border-radius:7px;font-weight:600;">Log in</a></p>
+      <p style="font-size:14px;color:#66717D;">Or copy this link into your browser:<br/>${opts.loginUrl}</p>
+    </div>
+  `;
+  await getTransporter().sendMail({ from, to, subject, text, html });
+}
+
+export async function sendInviteDeniedNotification(
+  to: string,
+  opts: {
+    inviterFirstName: string;
+    inviteeName: string;
+    inviteeEmail: string;
+    companyName: string;
+  }
+) {
+  const from = `"${process.env.MAIL_FROM_NAME || 'Reserve Fund Advisors'}" <${
+    process.env.MAIL_FROM_ADDRESS || process.env.EMAIL_USER
+  }>`;
+  const subject = `${opts.inviteeName} declined your invitation`;
+  const text = `${opts.inviteeName} (${opts.inviteeEmail}) has declined your invitation to join ${opts.companyName}. You can invite them again from your dashboard if needed.`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#102C4A;padding:24px;">
+      <h2 style="color:#0E519B;margin:0 0 12px;">Hi ${opts.inviterFirstName},</h2>
+      <p style="font-size:16px;line-height:1.5;"><strong>${opts.inviteeName}</strong> (${opts.inviteeEmail}) has declined your invitation to join <strong>${opts.companyName}</strong>.</p>
+      <p style="font-size:16px;line-height:1.5;">You can invite them again from your dashboard if needed.</p>
+    </div>
+  `;
+  await getTransporter().sendMail({ from, to, subject, text, html });
+}
