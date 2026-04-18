@@ -1112,7 +1112,7 @@ export default function DashboardPage() {
         onApply={async ({ file }) => {
           const form = new FormData();
           form.append('file', file);
-          const res = await fetch('/api/profile/logo', { method: 'POST', body: form });
+          const res = await fetch('/api/profile/logo', { method: 'POST', credentials: 'include', body: form });
           if (res.ok) await fetchDashboard();
         }}
       />

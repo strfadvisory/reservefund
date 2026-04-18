@@ -96,6 +96,7 @@ export function PendingInviteModal({
       const res = await fetch(`/api/invite/${current.id}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(body),
       });
       const data = await res.json();

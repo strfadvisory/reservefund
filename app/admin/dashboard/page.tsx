@@ -220,7 +220,7 @@ export default function AdminDashboardPage() {
 
   const handleLogout = useCallback(async () => {
     try {
-      await fetch('/api/admin/auth/logout', { method: 'POST' });
+      await fetch('/api/admin/auth/logout', { method: 'POST', credentials: 'include' });
     } finally {
       router.push('/admin/login');
     }

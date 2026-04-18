@@ -163,7 +163,7 @@ export default function AddAssociationPage() {
       const fd = new FormData();
       fd.append('associationId', associationId);
       fd.append('file', file);
-      const res = await fetch('/api/reserve-studies', { method: 'POST', body: fd });
+      const res = await fetch('/api/reserve-studies', { method: 'POST', credentials: 'include', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
       await refreshStudies();
@@ -176,7 +176,7 @@ export default function AddAssociationPage() {
   };
 
   const deleteStudy = async (id: string) => {
-    await fetch(`/api/reserve-studies?id=${id}`, { method: 'DELETE' });
+    await fetch(`/api/reserve-studies?id=${id}`, { method: 'DELETE', credentials: 'include' });
     refreshStudies();
   };
 
@@ -1013,7 +1013,7 @@ export default function AddAssociationPage() {
             const fd = new FormData();
             fd.append('associationId', associationId);
             fd.append('file', file);
-            const res = await fetch('/api/associations/logo', { method: 'POST', body: fd });
+            const res = await fetch('/api/associations/logo', { method: 'POST', credentials: 'include', body: fd });
             const data = await res.json();
             if (res.ok && data.association?.logoFileId) {
               setLogoUrl(`/api/logo/${data.association.logoFileId}`);

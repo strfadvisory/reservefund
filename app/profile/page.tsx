@@ -142,6 +142,7 @@ export default function ProfilePage() {
       const res = await fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           companyName,
           website,
@@ -167,7 +168,7 @@ export default function ProfilePage() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await fetch('/api/profile/logo', { method: 'POST', body: fd });
+      const res = await fetch('/api/profile/logo', { method: 'POST', credentials: 'include', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload failed');
     } catch (e) {

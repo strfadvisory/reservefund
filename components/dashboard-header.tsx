@@ -67,7 +67,7 @@ export function DashboardHeader({
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch {}
     setUserMenuOpen(false);
     router.push('/login');
