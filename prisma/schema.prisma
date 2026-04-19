@@ -145,3 +145,22 @@ model AdminSession {
   expiresAt    DateTime
   createdAt    DateTime   @default(now())
 }
+
+model ActivityLog {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  ownerUserId  String   @db.ObjectId
+  actorUserId  String?  @db.ObjectId
+  actorEmail   String?
+  actorName    String?
+  orgScope     String   @default("self")
+  event        String
+  description  String?
+  metadata     Json?
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+
+  @@index([ownerUserId, createdAt])
+  @@index([ownerUserId, orgScope, createdAt])
+  @@index([actorUserId, createdAt])
+}

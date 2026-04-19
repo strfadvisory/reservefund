@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { uploadFile, deleteFile } from '@/lib/gridfs';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
+import {
+  validateStudyFileName,
+  validateStudyMimeType,
+  validateStudyTemplateBuffer,
+} from '@/lib/studyTemplate';
 
 export const runtime = 'nodejs';
 
@@ -21,7 +27,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
 
+    const nameCheck = validateStudyFileName(file.name);
+    if (!nameCheck.ok) {
+      return NextResponse.json({ error: nameCheck.reason }, { status: 400 });
+    }
+    const mimeCheck = validateStudyMimeType(file.type);
+    if (!mimeCheck.ok) {
+      return NextResponse.json({ error: mimeCheck.reason }, { status: 400 });
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
+    const templateCheck = validateStudyTemplateBuffer(buffer);
+    if (!templateCheck.ok) {
+      return NextResponse.json({ error: templateCheck.reason }, { status: 400 });
+    }
+
     const fileId = await uploadFile(buffer, file.name, file.type || 'application/octet-stream', {
       userId: user.id,
       associationId,
@@ -36,6 +56,13 @@ export async function POST(request: NextRequest) {
         size: buffer.length,
         contentType: file.type || null,
       },
+    });
+    await logActivity({
+      event: ACTIVITY_EVENTS.RESERVE_STUDY_UPLOADED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `Uploaded reserve study "${study.fileName}"`,
+      metadata: { reserveStudyId: study.id, associationId, size: study.size },
     });
     return NextResponse.json({ study }, { status: 201 });
   } catch (error: any) {
@@ -65,6 +92,13 @@ export async function DELETE(request: NextRequest) {
     }
     await deleteFile(study.fileId);
     await prisma.reserveStudy.delete({ where: { id } });
+    await logActivity({
+      event: ACTIVITY_EVENTS.RESERVE_STUDY_DELETED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `Deleted reserve study "${study.fileName}"`,
+      metadata: { reserveStudyId: id },
+    });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });

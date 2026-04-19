@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createSession, hashOtp } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,6 +25,12 @@ export async function POST(request: NextRequest) {
       data: { verified: true, otpHash: null, otpExpiresAt: null },
     });
     await createSession(user.id);
+    await logActivity({
+      event: ACTIVITY_EVENTS.OTP_VERIFIED,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Verified OTP and signed in',
+    });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Verification failed' }, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -49,6 +50,14 @@ export async function POST(request: NextRequest) {
     const updated = await prisma.user.update({
       where: { id: user.id },
       data,
+    });
+
+    await logActivity({
+      event: ACTIVITY_EVENTS.PROFILE_UPDATED,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Updated profile details',
+      metadata: { fields: Object.keys(data) },
     });
 
     return NextResponse.json({ ok: true, userId: updated.id });

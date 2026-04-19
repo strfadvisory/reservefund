@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { sendInviteDeniedNotification } from '@/lib/mailer';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -42,12 +43,26 @@ export async function POST(
         where: { id: invite.id },
         data: { status: 'accepted', chosenAssociationId: associationId },
       });
+      await logActivity({
+        event: ACTIVITY_EVENTS.INVITE_ACCEPTED,
+        ownerUserId: invite.invitedBy,
+        actor: user,
+        description: `Accepted invitation and joined association`,
+        metadata: { inviteId: invite.id, associationId },
+      });
       return NextResponse.json({ ok: true });
     }
 
     await prisma.invite.update({
       where: { id: invite.id },
       data: { status: 'denied' },
+    });
+    await logActivity({
+      event: ACTIVITY_EVENTS.INVITE_DECISION,
+      ownerUserId: invite.invitedBy,
+      actor: user,
+      description: 'Declined invitation',
+      metadata: { inviteId: invite.id, decision: 'denied' },
     });
 
     const inviter = await prisma.user.findUnique({ where: { id: invite.invitedBy } });

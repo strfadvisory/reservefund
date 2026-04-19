@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { Toast } from '@/components/toast';
 import * as XLSX from 'xlsx';
+import { validateStudyFile } from '@/lib/studyTemplate';
 
 type Association = {
   id: string;
@@ -193,10 +194,15 @@ function StudyPageContent() {
   const handleUploadDocument = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.xlsx,.xls,.csv';
+    input.accept = '.xlsx';
     input.onchange = async (e: any) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      const validation = await validateStudyFile(file);
+      if (!validation.ok) {
+        setToast({ message: validation.reason, type: 'error' });
+        return;
+      }
       try {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data);

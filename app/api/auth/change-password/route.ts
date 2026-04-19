@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSessionUser, hashPassword, verifyPassword } from '@/lib/auth';
 import prisma from '@/lib/prisma';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,6 +32,13 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: hashPassword(newPassword) },
+    });
+
+    await logActivity({
+      event: ACTIVITY_EVENTS.PASSWORD_CHANGED,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Changed account password',
     });
 
     return NextResponse.json({ success: true });

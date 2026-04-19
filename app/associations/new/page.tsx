@@ -10,6 +10,9 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 import { UploadReserveStudyModal } from '@/components/upload-reserve-study-modal';
+import { useToast } from '@/components/toast-provider';
+
+const FINAL_CONFIRM_TOAST = 'Association setup complete';
 
 const STEPS = [
   { key: 'step1', label1: 'Complete', label2: 'Association Profile' },
@@ -58,6 +61,7 @@ function StepperChevron() {
 
 export default function AssociationsPage() {
   const router = useRouter();
+  const { notify } = useToast();
   const [currentStep, setCurrentStep] = useState(0);
   const [inviteOpen, setInviteOpen] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -100,8 +104,12 @@ export default function AssociationsPage() {
   const [address2, setAddress2] = useState('');
 
   const goNext = () => {
-    if (currentStep < 2) setCurrentStep(currentStep + 1);
-    else router.push('/dashboard');
+    if (currentStep < 2) {
+      setCurrentStep(currentStep + 1);
+      return;
+    }
+    notify(FINAL_CONFIRM_TOAST, 'success');
+    router.push('/dashboard');
   };
 
   const skip = () => {

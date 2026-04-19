@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -55,11 +56,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Not found' }, { status: 404 });
       }
       const updated = await prisma.association.update({ where: { id }, data });
+      const newlyPublished = !existing.published && updated.published;
+      await logActivity({
+        event: newlyPublished ? ACTIVITY_EVENTS.ASSOCIATION_PUBLISHED : ACTIVITY_EVENTS.ASSOCIATION_UPDATED,
+        ownerUserId: user.id,
+        actor: user,
+        description: newlyPublished
+          ? `Published association "${updated.associationName}"`
+          : `Updated association "${updated.associationName}"`,
+        metadata: { associationId: updated.id },
+      });
       return NextResponse.json({ association: updated });
     }
 
     const created = await prisma.association.create({
       data: { ...data, userId: user.id },
+    });
+    await logActivity({
+      event: ACTIVITY_EVENTS.ASSOCIATION_CREATED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `Created association "${created.associationName}"`,
+      metadata: { associationId: created.id },
     });
     return NextResponse.json({ association: created }, { status: 201 });
   } catch (error: any) {

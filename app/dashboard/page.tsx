@@ -21,6 +21,7 @@ type StudyRow = { id: string; name: string; sub: string };
 type DashboardData = {
   hero: { addressLine: string };
   roleColumn: { profileImageFileId: string | null; roleLabel: string; description: string };
+  membersTitle: string;
   members: MemberRow[];
   associations: AssociationRow[];
   studies: StudyRow[];
@@ -49,11 +50,40 @@ const GUIDES = [
   },
 ];
 
-const FILTERS = ['Today', 'Yesterday', 'Last 7 Days', 'This Month'];
+const FILTERS = ['Today', 'Yesterday', 'Last 7 Days', 'This Month'] as const;
+type FilterLabel = (typeof FILTERS)[number];
+
+const FILTER_TO_RANGE: Record<FilterLabel, 'today' | 'yesterday' | 'last7' | 'month'> = {
+  'Today': 'today',
+  'Yesterday': 'yesterday',
+  'Last 7 Days': 'last7',
+  'This Month': 'month',
+};
+
+type ActivityItem = {
+  id: string;
+  event: string;
+  eventLabel: string;
+  description: string | null;
+  actorName: string | null;
+  actorEmail: string | null;
+  actorUserId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: unknown;
+  createdAt: string;
+};
+
+function formatActivityDate(iso: string): string {
+  const d = new Date(iso);
+  const date = d.toLocaleDateString(undefined, { month: 'short', day: '2-digit', year: 'numeric' });
+  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return `${date} · ${time}`;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { selectedOrgId, isSelfOrg } = useOrg();
+  const { selectedOrgId, isSelfOrg, orgsLoaded } = useOrg();
   const [inviteOpen, setInviteOpen] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -67,7 +97,12 @@ export default function DashboardPage() {
   >(null);
   const [introOpen, setIntroOpen] = useState(false);
   const [dontShowIntro, setDontShowIntro] = useState(false);
-  const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
+  const [activeFilter, setActiveFilter] = useState<FilterLabel>(FILTERS[0]);
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
+  const [activityTotal, setActivityTotal] = useState(0);
+  const [activityEnabled, setActivityEnabled] = useState(true);
+  const [activityLoading, setActivityLoading] = useState(false);
   const [userName, setUserName] = useState('');
   const [data, setData] = useState<DashboardData | null>(null);
   const [avatarUploadOpen, setAvatarUploadOpen] = useState(false);
@@ -79,6 +114,7 @@ export default function DashboardPage() {
   const [inviteError, setInviteError] = useState('');
 
   const fetchDashboard = useCallback(async () => {
+    if (!orgsLoaded) return;
     try {
       const res = await fetch(`/api/dashboard?orgId=${encodeURIComponent(selectedOrgId)}`);
       const body = await res.json();
@@ -90,7 +126,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error('Failed to fetch dashboard:', error);
     }
-  }, [selectedOrgId]);
+  }, [selectedOrgId, orgsLoaded]);
 
   const fetchPendingInvites = async () => {
     try {
@@ -111,6 +147,43 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
+
+  useEffect(() => {
+    if (!orgsLoaded) return;
+    let cancelled = false;
+    const range = FILTER_TO_RANGE[activeFilter];
+    const params = new URLSearchParams({
+      orgId: selectedOrgId,
+      range,
+    });
+    if (activitySearch.trim()) params.set('search', activitySearch.trim());
+    setActivityLoading(true);
+    fetch(`/api/activity?${params.toString()}`, { cache: 'no-store' })
+      .then(async (r) => {
+        const body = await r.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!r.ok) {
+          setActivityItems([]);
+          setActivityTotal(0);
+          setActivityEnabled(true);
+          return;
+        }
+        setActivityEnabled(Boolean(body?.enabled ?? true));
+        setActivityItems(Array.isArray(body?.items) ? body.items : []);
+        setActivityTotal(Number(body?.total) || 0);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setActivityItems([]);
+        setActivityTotal(0);
+      })
+      .finally(() => {
+        if (!cancelled) setActivityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOrgId, activeFilter, activitySearch, orgsLoaded]);
 
   const submitInvite = async () => {
     markTouched('firstName');
@@ -223,6 +296,7 @@ export default function DashboardPage() {
   };
 
   const roleLabel = data?.roleColumn.roleLabel || 'Member';
+  const membersTitle = data?.membersTitle || 'Members';
   const profileImageFileId = data?.roleColumn.profileImageFileId || null;
   const description = data?.roleColumn.description || '';
   const addressLine = data?.hero.addressLine || '';
@@ -466,7 +540,7 @@ export default function DashboardPage() {
 
           {/* Column 2: Members */}
           <ListColumn
-            title={roleLabel}
+            title={membersTitle}
             items={members}
             cta="Invite New"
             ctaIcon={<UserPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
@@ -486,6 +560,7 @@ export default function DashboardPage() {
             ctaIcon={<FolderPlus className="w-5 h-5" style={{ color: '#66717D' }} />}
             onCtaClick={() => router.push('/add-association')}
             ctaHidden={!canAddAssociation}
+            onItemClick={(idx) => router.push(`/associations?id=${associations[idx].id}`)}
           />
 
           {/* Column 4: Reserver Study */}
@@ -501,6 +576,7 @@ export default function DashboardPage() {
             ctaDisabled={associations.length === 0}
             ctaHidden={!canUploadStudy}
             onCtaClick={() => router.push('/study?selectAssociation=1')}
+            onItemClick={(idx) => router.push(`/study?studyId=${studies[idx].id}`)}
           />
         </div>
 
@@ -586,6 +662,16 @@ export default function DashboardPage() {
 
         {/* Activity Section */}
         <div style={{ marginTop: '40px', paddingBottom: '48px' }}>
+          <h2
+            style={{
+              color: '#102C4A',
+              fontSize: '20px',
+              fontWeight: 600,
+              marginBottom: '16px',
+            }}
+          >
+            Member Activity
+          </h2>
           <div
             className="flex items-center justify-between"
             style={{ marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}
@@ -605,6 +691,8 @@ export default function DashboardPage() {
                 <Input
                   placeholder="Quick Search"
                   className="h-11"
+                  value={activitySearch}
+                  onChange={(e) => setActivitySearch(e.target.value)}
                   style={{
                     paddingLeft: '40px',
                     borderColor: '#D7D7D7',
@@ -615,14 +703,16 @@ export default function DashboardPage() {
                 />
               </div>
               <span style={{ color: '#102C4A', fontSize: '15px', fontWeight: 500 }}>
-                372 Logs Founded
+                {activityLoading
+                  ? 'Loading…'
+                  : `${activityTotal} Log${activityTotal === 1 ? '' : 's'} Found`}
               </span>
             </div>
 
             <TabSwitcher
-              tabs={FILTERS}
+              tabs={FILTERS as unknown as string[]}
               activeTab={activeFilter}
-              onTabChange={setActiveFilter}
+              onTabChange={(t) => setActiveFilter(t as FilterLabel)}
             />
           </div>
 
@@ -646,53 +736,99 @@ export default function DashboardPage() {
               }}
             >
               <span style={{ color: '#102C4A', fontSize: '15px', fontWeight: 600 }}>
-                Members
+                Member
               </span>
               <span style={{ color: '#102C4A', fontSize: '15px', fontWeight: 600 }}>
-                Activities
+                Activity
               </span>
               <span style={{ color: '#102C4A', fontSize: '15px', fontWeight: 600 }}>
-                Date Time
+                Date &amp; Time
               </span>
             </div>
-            {/* Skeleton rows */}
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1.2fr 2fr 1fr',
-                  padding: '22px 28px',
-                  borderBottom: i === 7 ? 'none' : '1px solid #F1F2F4',
-                  alignItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    height: '8px',
-                    width: '70%',
-                    background: '#EEF0F3',
-                    borderRadius: '4px',
-                  }}
-                />
-                <div
-                  style={{
-                    height: '8px',
-                    width: '85%',
-                    background: '#EEF0F3',
-                    borderRadius: '4px',
-                  }}
-                />
-                <div
-                  style={{
-                    height: '8px',
-                    width: '60%',
-                    background: '#EEF0F3',
-                    borderRadius: '4px',
-                  }}
-                />
+
+            {!activityEnabled ? (
+              <div style={{ padding: '32px 28px', color: '#66717D', fontSize: '14px' }}>
+                Activity tracking is disabled. Set <code>ACTIVITY_TRACKING_ENABLED=true</code> in your
+                environment to enable it.
               </div>
-            ))}
+            ) : activityLoading && activityItems.length === 0 ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 2fr 1fr',
+                    padding: '22px 28px',
+                    borderBottom: i === 5 ? 'none' : '1px solid #F1F2F4',
+                    alignItems: 'center',
+                  }}
+                >
+                  <div style={{ height: '8px', width: '70%', background: '#EEF0F3', borderRadius: '4px' }} />
+                  <div style={{ height: '8px', width: '85%', background: '#EEF0F3', borderRadius: '4px' }} />
+                  <div style={{ height: '8px', width: '60%', background: '#EEF0F3', borderRadius: '4px' }} />
+                </div>
+              ))
+            ) : activityItems.length === 0 ? (
+              <div style={{ padding: '32px 28px', color: '#66717D', fontSize: '14px' }}>
+                No activity found for this range.
+              </div>
+            ) : (
+              activityItems.map((item, i) => {
+                const actor =
+                  item.actorName ||
+                  item.actorEmail ||
+                  'Unknown member';
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.2fr 2fr 1fr',
+                      padding: '18px 28px',
+                      borderBottom: i === activityItems.length - 1 ? 'none' : '1px solid #F1F2F4',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: '#102C4A', fontSize: '14px', fontWeight: 500 }}>
+                        {actor}
+                      </div>
+                      {item.actorEmail && item.actorName && (
+                        <div
+                          style={{
+                            color: '#66717D',
+                            fontSize: '12px',
+                            marginTop: '2px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {item.actorEmail}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ color: '#102C4A', fontSize: '14px', lineHeight: 1.4 }}>
+                      {item.description || item.eventLabel}
+                      {item.ipAddress && (
+                        <span
+                          style={{
+                            color: '#66717D',
+                            fontSize: '12px',
+                            marginLeft: '8px',
+                          }}
+                        >
+                          · {item.ipAddress}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ color: '#66717D', fontSize: '13px' }}>
+                      {formatActivityDate(item.createdAt)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </div>
@@ -1232,6 +1368,7 @@ function ListColumn({
   ctaDisabled,
   ctaHidden,
   onCtaClick,
+  onItemClick,
 }: {
   title: string;
   items: { primary: string; secondary: string; status?: string }[];
@@ -1241,6 +1378,7 @@ function ListColumn({
   ctaDisabled?: boolean;
   ctaHidden?: boolean;
   onCtaClick?: () => void;
+  onItemClick?: (index: number) => void;
 }) {
   return (
     <div
@@ -1293,7 +1431,12 @@ function ListColumn({
           </div>
         )}
         {items.map((item, idx) => (
-          <div key={idx} className="flex items-start justify-between" style={{ gap: '12px' }}>
+          <div
+            key={idx}
+            className="flex items-start justify-between"
+            style={{ gap: '12px', cursor: onItemClick ? 'pointer' : 'default' }}
+            onClick={() => onItemClick?.(idx)}
+          >
             <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{

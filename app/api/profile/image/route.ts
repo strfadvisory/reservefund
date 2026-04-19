@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { uploadLogo, deleteLogo } from '@/lib/gridfs';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -42,6 +43,14 @@ export async function POST(request: NextRequest) {
       data: { profileImageFileId: fileId },
     });
 
+    await logActivity({
+      event: ACTIVITY_EVENTS.PROFILE_IMAGE_UPLOADED,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Uploaded profile image',
+      metadata: { fileId },
+    });
+
     return NextResponse.json({ profileImageFileId: fileId }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Upload failed' }, { status: 500 });
@@ -61,6 +70,12 @@ export async function DELETE() {
     await prisma.user.update({
       where: { id: user.id },
       data: { profileImageFileId: null },
+    });
+    await logActivity({
+      event: ACTIVITY_EVENTS.PROFILE_IMAGE_DELETED,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Removed profile image',
     });
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error: any) {

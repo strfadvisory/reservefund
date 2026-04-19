@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Plus, Search } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
@@ -92,7 +93,8 @@ function composeDetailAddress(a: Association): string {
   return parts.join(', ');
 }
 
-export default function AssociationsPage() {
+function AssociationsPageContent() {
+  const searchParams = useSearchParams();
   const [associations, setAssociations] = useState<Association[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeId, setActiveId] = useState<string>('');
@@ -110,7 +112,10 @@ export default function AssociationsPage() {
         if (cancelled) return;
         const list: Association[] = data.associations || [];
         setAssociations(list);
-        if (list.length > 0) setActiveId(list[0].id);
+        const preselect = searchParams.get('id');
+        const found = preselect ? list.find((a) => a.id === preselect) : null;
+        if (found) setActiveId(found.id);
+        else if (list.length > 0) setActiveId(list[0].id);
       } catch {
         // ignore
       } finally {
@@ -419,5 +424,13 @@ export default function AssociationsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AssociationsPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: '64px 32px' }}>Loading…</div>}>
+      <AssociationsPageContent />
+    </Suspense>
   );
 }

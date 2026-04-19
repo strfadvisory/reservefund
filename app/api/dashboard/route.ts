@@ -14,6 +14,7 @@ type StudyRow = { id: string; name: string; sub: string };
 type DashboardPayload = {
   hero: { addressLine: string };
   roleColumn: { profileImageFileId: string | null; roleLabel: string; description: string };
+  membersTitle: string;
   members: MemberRow[];
   associations: AssociationRow[];
   studies: StudyRow[];
@@ -107,9 +108,10 @@ async function buildSelfPayload(user: any): Promise<DashboardPayload> {
     hero: { addressLine: buildAddressLine(user) },
     roleColumn: {
       profileImageFileId: user.profileImageFileId || null,
-      roleLabel: ROLES[user.companyType] || 'Member',
+      roleLabel: 'Super Admin',
       description: 'You can manage associations, members and study data behalf of your company',
     },
+    membersTitle: ROLES[user.companyType] || 'Members',
     members,
     associations: associationRows,
     studies: studyRows,
@@ -131,6 +133,7 @@ async function buildInvitePayload(user: any, invite: any): Promise<DashboardPayl
     return {
       hero: { addressLine: '' },
       roleColumn: { profileImageFileId: null, roleLabel: 'Member', description: 'Organization unavailable.' },
+      membersTitle: 'Members',
       members: [],
       associations: [],
       studies: [],
@@ -238,6 +241,7 @@ async function buildInvitePayload(user: any, invite: any): Promise<DashboardPayl
       roleLabel: user.designation || ROLES[user.companyType] || 'Member',
       description: `You are a ${user.designation || 'member'} at ${inviter.companyName || fullName(inviter)}.`,
     },
+    membersTitle: ROLES[inviter.companyType] || 'Members',
     members,
     associations: associationRows,
     studies: studyRows,

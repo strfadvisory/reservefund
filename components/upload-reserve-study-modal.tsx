@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { validateStudyFile, validateStudyFileName } from '@/lib/studyTemplate';
 
 export type UploadReserveStudyModalProps = {
   open: boolean;
@@ -105,11 +106,47 @@ export function UploadReserveStudyModal({
     router.push(`/study?${params.toString()}`);
   };
 
+  const handleFileChange = async (selected: File | null) => {
+    setError('');
+    if (!selected) {
+      setFile(null);
+      return;
+    }
+    const nameCheck = validateStudyFileName(selected.name);
+    if (!nameCheck.ok) {
+      setError(nameCheck.reason);
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    const result = await validateStudyFile(selected);
+    if (!result.ok) {
+      setError(result.reason);
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    setFile(selected);
+  };
+
+  const handleDownloadTemplate = () => {
+    const link = document.createElement('a');
+    link.href = '/Template.xlsx';
+    link.download = 'Template.xlsx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleUpload = async () => {
     if (!file || !association) return;
     setSubmitting(true);
     setError('');
     try {
+      const result = await validateStudyFile(file);
+      if (!result.ok) {
+        throw new Error(result.reason);
+      }
       const form = new FormData();
       form.append('associationId', association);
       form.append('file', file);
@@ -299,6 +336,7 @@ export function UploadReserveStudyModal({
             </p>
             <button
               type="button"
+              onClick={handleDownloadTemplate}
               style={{
                 color: '#0E519B',
                 fontSize: '15px',
@@ -342,9 +380,10 @@ export function UploadReserveStudyModal({
               ref={fileInputRef}
               id="urs-fileUpload"
               type="file"
+              accept=".xlsx"
               disabled={submitting}
               style={{ display: 'none' }}
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
             />
             <div
               className="flex items-center"

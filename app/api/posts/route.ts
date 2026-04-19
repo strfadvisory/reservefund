@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getSessionUser } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +24,17 @@ export async function POST(request: NextRequest) {
         friend,
       },
     });
+
+    const user = await getSessionUser();
+    if (user) {
+      await logActivity({
+        event: ACTIVITY_EVENTS.POST_CREATED,
+        ownerUserId: user.id,
+        actor: user,
+        description: `Created post "${post.title}"`,
+        metadata: { postId: post.id },
+      });
+    }
 
     return NextResponse.json(
       { message: 'Post created successfully', post },

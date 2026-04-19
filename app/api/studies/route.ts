@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -37,6 +38,14 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    await logActivity({
+      event: ACTIVITY_EVENTS.STUDY_CREATED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `Created study "${study.modelName}"`,
+      metadata: { studyId: study.id, associationId: study.associationId },
+    });
+
     return NextResponse.json({ success: true, study }, { status: 201 });
   } catch (error: any) {
     console.error('Error saving study:', error);
@@ -55,6 +64,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }
     await prisma.study.delete({ where: { id } });
+    await logActivity({
+      event: ACTIVITY_EVENTS.STUDY_DELETED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `Deleted study "${study.modelName}"`,
+      metadata: { studyId: id },
+    });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });
@@ -84,6 +100,13 @@ export async function PATCH(request: NextRequest) {
     const updated = await prisma.study.update({
       where: { id },
       data: { isBlocked: typeof isBlocked === 'boolean' ? isBlocked : !study.isBlocked },
+    });
+    await logActivity({
+      event: ACTIVITY_EVENTS.STUDY_BLOCK_CHANGED,
+      ownerUserId: user.id,
+      actor: user,
+      description: `${updated.isBlocked ? 'Blocked' : 'Unblocked'} study "${updated.modelName}"`,
+      metadata: { studyId: updated.id, isBlocked: updated.isBlocked },
     });
     return NextResponse.json({ success: true, study: updated });
   } catch (error: any) {

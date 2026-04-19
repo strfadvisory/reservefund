@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createSession, hashPassword } from '@/lib/auth';
 import config from '@/config.json';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -77,6 +78,13 @@ export async function POST(request: NextRequest) {
     });
 
     await createSession(user.id);
+    await logActivity({
+      event: ACTIVITY_EVENTS.INVITE_ACCEPTED,
+      ownerUserId: invite.invitedBy,
+      actor: user,
+      description: `Accepted invitation from ${inviter?.email || 'owner'}`,
+      metadata: { inviteId: invite.id },
+    });
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to accept invite' }, { status: 500 });

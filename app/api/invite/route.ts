@@ -4,6 +4,7 @@ import prisma from '@/lib/prisma';
 import { getSessionUser } from '@/lib/auth';
 import { sendInviteEmail, sendExistingUserInviteNotification } from '@/lib/mailer';
 import config from '@/config.json';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export const runtime = 'nodejs';
 
@@ -61,6 +62,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: `Failed to send notification email: ${e.message}` }, { status: 502 });
       }
 
+      await logActivity({
+        event: ACTIVITY_EVENTS.INVITE_SENT,
+        ownerUserId: inviter.id,
+        actor: inviter,
+        description: `Invited existing user ${normalizedEmail}`,
+        metadata: { inviteId: invite.id, email: normalizedEmail, linkedExisting: true },
+      });
       return NextResponse.json({ invite, linked: false, awaitingResponse: true });
     }
 
@@ -91,6 +99,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to send invite email: ${e.message}` }, { status: 502 });
     }
 
+    await logActivity({
+      event: ACTIVITY_EVENTS.INVITE_SENT,
+      ownerUserId: inviter.id,
+      actor: inviter,
+      description: `Sent invitation to ${normalizedEmail}`,
+      metadata: { inviteId: invite.id, email: normalizedEmail },
+    });
     return NextResponse.json({ invite, linked: false });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to invite' }, { status: 500 });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { hashOtp, hashPassword } from '@/lib/auth';
+import { ACTIVITY_EVENTS, logActivity } from '@/lib/activity';
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,13 @@ export async function POST(request: NextRequest) {
     await prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: hashPassword(password), otpHash: null, otpExpiresAt: null },
+    });
+
+    await logActivity({
+      event: ACTIVITY_EVENTS.PASSWORD_RESET,
+      ownerUserId: user.id,
+      actor: user,
+      description: 'Reset password via email link',
     });
 
     return NextResponse.json({ ok: true });
