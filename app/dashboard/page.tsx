@@ -20,7 +20,7 @@ type StudyRow = { id: string; name: string; sub: string };
 
 type DashboardData = {
   hero: { addressLine: string };
-  roleColumn: { logoFileId: string | null; roleLabel: string; description: string };
+  roleColumn: { profileImageFileId: string | null; roleLabel: string; description: string };
   members: MemberRow[];
   associations: AssociationRow[];
   studies: StudyRow[];
@@ -223,7 +223,7 @@ export default function DashboardPage() {
   };
 
   const roleLabel = data?.roleColumn.roleLabel || 'Member';
-  const logoFileId = data?.roleColumn.logoFileId || null;
+  const profileImageFileId = data?.roleColumn.profileImageFileId || null;
   const description = data?.roleColumn.description || '';
   const addressLine = data?.hero.addressLine || '';
   const stats = data?.stats || { associations: 0, members: 0, studies: 0, versions: 0 };
@@ -376,9 +376,9 @@ export default function DashboardPage() {
                 onMouseEnter={() => setAvatarHovered(true)}
                 onMouseLeave={() => setAvatarHovered(false)}
               >
-                {logoFileId ? (
+                {profileImageFileId ? (
                   <img
-                    src={`/api/profile/logo/${logoFileId}`}
+                    src={`/api/profile/image/${profileImageFileId}`}
                     alt="Profile"
                     style={{ width: '56px', height: '56px', borderRadius: '10px', objectFit: 'cover' }}
                   />
@@ -390,12 +390,12 @@ export default function DashboardPage() {
                     <UserCircle2 className="w-7 h-7" style={{ color: '#66717D' }} />
                   </div>
                 )}
-                {isSelfOrg && logoFileId && avatarHovered && (
+                {isSelfOrg && profileImageFileId && avatarHovered && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      fetch('/api/profile/logo', { method: 'DELETE' }).then((r) => {
+                      fetch('/api/profile/image', { method: 'DELETE' }).then((r) => {
                         if (r.ok) fetchDashboard();
                       });
                     }}
@@ -1121,7 +1121,7 @@ export default function DashboardPage() {
         onApply={async ({ file }) => {
           const form = new FormData();
           form.append('file', file);
-          const res = await fetch('/api/profile/logo', { method: 'POST', credentials: 'include', body: form });
+          const res = await fetch('/api/profile/image', { method: 'POST', credentials: 'include', body: form });
           if (res.ok) await fetchDashboard();
         }}
       />
