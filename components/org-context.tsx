@@ -6,6 +6,7 @@ export type OrgItem = {
   id: string;
   name: string;
   roleLabel: string;
+  companyType: string;
   kind: 'self' | 'invite';
   logoFileId: string | null;
 };

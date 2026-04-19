@@ -15,6 +15,7 @@ export async function GET() {
     id: 'self',
     name: user.companyName || `${user.firstName || 'My'} ${user.lastName || ''}`.trim() || 'My Organization',
     roleLabel: ROLES[user.companyType] || 'Member',
+    companyType: user.companyType || '',
     kind: 'self' as const,
     logoFileId: user.logoFileId || null,
   };
@@ -41,6 +42,7 @@ export async function GET() {
         id: invite.id,
         name: inviter.companyName || `${inviter.firstName || ''} ${inviter.lastName || ''}`.trim() || inviter.email,
         roleLabel: ROLES[inviter.companyType] || 'Member',
+        companyType: inviter.companyType || '',
         kind: 'invite' as const,
         logoFileId: inviter.logoFileId || null,
       };
