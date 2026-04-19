@@ -295,3 +295,13 @@ button[disabled][style*="cursor"],
 .thin-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #B5BCC4;
 }
+
+/* Chat Typing Animation */
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
