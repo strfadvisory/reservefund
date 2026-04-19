@@ -373,10 +373,9 @@ function StudyPageContent() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            marginBottom: '20px',
             maxWidth: '1242px',
+            width: '100%',
             margin: '0 auto 20px',
-            padding: '0 32px',
           }}
         >
           <button
@@ -426,8 +425,8 @@ function StudyPageContent() {
             gap: '12px',
             flexWrap: 'wrap',
             maxWidth: '1242px',
+            width: '100%',
             margin: '0 auto',
-            padding: '0 32px',
           }}
         >
           <input

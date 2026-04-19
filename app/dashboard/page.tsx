@@ -65,7 +65,7 @@ export default function DashboardPage() {
   const [activeGuide, setActiveGuide] = useState<
     { title: string; videoUrl: string } | null
   >(null);
-  const [introOpen, setIntroOpen] = useState(true);
+  const [introOpen, setIntroOpen] = useState(false);
   const [dontShowIntro, setDontShowIntro] = useState(false);
   const [activeFilter, setActiveFilter] = useState(FILTERS[0]);
   const [userName, setUserName] = useState('');
@@ -878,7 +878,16 @@ export default function DashboardPage() {
                     <Checkbox
                       id="dontShowIntro"
                       checked={dontShowIntro}
-                      onCheckedChange={(v) => setDontShowIntro(v === true)}
+                      onCheckedChange={(v) => {
+                        const checked = v === true;
+                        setDontShowIntro(checked);
+                        if (checked) {
+                          if (typeof window !== 'undefined') {
+                            window.localStorage.setItem('dashboard-invite-intro-hidden', 'true');
+                          }
+                          setIntroOpen(false);
+                        }
+                      }}
                       className="size-5"
                       style={{
                         borderColor: '#D7D7D7',
