@@ -172,7 +172,7 @@ export default function AssociationsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
-      <DashboardHeader role="Property Manager" />
+      <DashboardHeader />
 
       {/* Hero */}
       <div

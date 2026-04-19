@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Bell, UserCircle2, ChevronDown, LogOut } from 'lucide-react';
 import { useOrg } from '@/components/org-context';
+import { COMPANY_TYPE_LABELS } from '@/lib/company-types';
 
 const NAV_ITEMS: { label: string; href: string; match: string[] }[] = [
   { label: 'Dashboard', href: '/dashboard', match: ['/dashboard', '/study'] },
@@ -18,12 +19,10 @@ const NAV_ITEMS: { label: string; href: string; match: string[] }[] = [
 
 export type DashboardHeaderProps = {
   company?: string;
-  role?: string;
 };
 
 export function DashboardHeader({
   company = 'Apex Global Assoc...',
-  role = 'Super Admin',
 }: DashboardHeaderProps) {
   const pathname = usePathname() || '';
   const router = useRouter();
@@ -132,7 +131,9 @@ export function DashboardHeader({
             {selectedOrg?.name || company}
             <ChevronDown className="w-4 h-4" style={{ color: '#FFFFFF' }} />
           </div>
-          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{selectedOrg?.roleLabel || role}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>
+            {COMPANY_TYPE_LABELS[selectedOrg?.companyType ?? ''] || selectedOrg?.companyType || ''}
+          </div>
         </button>
       </div>
 

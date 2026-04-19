@@ -1,44 +1,80 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Search } from 'lucide-react';
 import { DashboardHeader } from '@/components/dashboard-header';
 import { Input } from '@/components/ui/input';
 
-type User = {
+type Invite = {
   id: string;
-  name: string;
-  role: string;
-  association: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation?: string | null;
+  status: string;
+  associationId?: string | null;
+  createdAt: string;
 };
 
-const USERS: User[] = [
-  { id: '1', name: 'James Anderson', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '2', name: 'Daniel Carter', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '3', name: 'Christopher Hayes', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '4', name: 'Matthew Collins', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '5', name: 'James Anderson', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '6', name: 'Daniel Carter', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '7', name: 'Christopher Hayes', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '8', name: 'Matthew Collins', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '9', name: 'Daniel Carter', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '10', name: 'Christopher Hayes', role: 'Field Manager', association: 'American Medical Association' },
-  { id: '11', name: 'Matthew Collins', role: 'Field Manager', association: 'American Medical Association' },
-];
+type Association = {
+  id: string;
+  associationName: string;
+  address?: string;
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'Pending',
+  awaiting_response: 'Awaiting Response',
+  accepted: 'Active',
+  declined: 'Declined',
+};
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString('en-US', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
 
 export default function UserManagerPage() {
-  const [activeId, setActiveId] = useState('2');
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [associations, setAssociations] = useState<Association[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
-  const filtered = USERS.filter((u) =>
-    u.name.toLowerCase().includes(query.toLowerCase()),
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/invite').then((r) => r.json()),
+      fetch('/api/associations').then((r) => r.json()),
+    ])
+      .then(([inviteData, assocData]) => {
+        const list: Invite[] = inviteData.invites ?? [];
+        setInvites(list);
+        setAssociations(assocData.associations ?? []);
+        if (list.length > 0) setActiveId(list[0].id);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const getAssociation = (id?: string | null): Association | undefined =>
+    associations.find((a) => a.id === id);
+
+  const filtered = invites.filter((u) =>
+    `${u.firstName} ${u.lastName}`.toLowerCase().includes(query.toLowerCase()),
   );
 
-  const active = USERS.find((u) => u.id === activeId) ?? USERS[0];
+  const active = invites.find((u) => u.id === activeId) ?? invites[0];
+  const activeAssoc = active ? getAssociation(active.associationId) : undefined;
 
   return (
     <div className="min-h-screen" style={{ background: '#F6F7F9', paddingTop: '64px' }}>
-      <DashboardHeader role="Property Manager" />
+      <DashboardHeader />
 
       {/* Hero */}
       <div
@@ -61,10 +97,8 @@ export default function UserManagerPage() {
               margin: 0,
             }}
           >
-            <span>{USERS.length}</span> User{' '}
-            <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.85)' }}>
-              Founded
-            </span>
+            <span>{loading ? '—' : invites.length}</span> User{invites.length !== 1 ? 's' : ''}{' '}
+            <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.85)' }}>Found</span>
           </h1>
           <button
             type="button"
@@ -135,221 +169,215 @@ export default function UserManagerPage() {
                 }}
               />
             </div>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                maxHeight: '820px',
-                overflowY: 'auto',
-              }}
-              className="thin-scrollbar"
-            >
-              {filtered.map((u) => {
-                const isActive = u.id === activeId;
-                return (
-                  <button
-                    key={u.id}
-                    type="button"
-                    onClick={() => setActiveId(u.id)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '14px 16px',
-                      borderRadius: '7px',
-                      border: '1px solid #D7D7D7',
-                      background: isActive ? '#F1F4F9' : '#FFFFFF',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <div
+
+            {loading ? (
+              <div style={{ color: '#66717D', fontSize: '14px', padding: '12px 4px' }}>
+                Loading...
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ color: '#66717D', fontSize: '14px', padding: '12px 4px' }}>
+                No users found.
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  maxHeight: '820px',
+                  overflowY: 'auto',
+                }}
+                className="thin-scrollbar"
+              >
+                {filtered.map((u) => {
+                  const isActive = u.id === activeId;
+                  const assoc = getAssociation(u.associationId);
+                  return (
+                    <button
+                      key={u.id}
+                      type="button"
+                      onClick={() => setActiveId(u.id)}
                       style={{
-                        color: '#102C4A',
-                        fontSize: '15px',
-                        fontWeight: 600,
-                        marginBottom: '4px',
-                        lineHeight: 1.35,
+                        textAlign: 'left',
+                        padding: '14px 16px',
+                        borderRadius: '7px',
+                        border: '1px solid #D7D7D7',
+                        background: isActive ? '#F1F4F9' : '#FFFFFF',
+                        cursor: 'pointer',
                       }}
                     >
-                      {u.name}
-                    </div>
-                    <div
-                      style={{
-                        color: '#66717D',
-                        fontSize: '13px',
-                        lineHeight: 1.5,
-                      }}
-                    >
-                      {u.role} at {u.association}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                      <div
+                        style={{
+                          color: '#102C4A',
+                          fontSize: '15px',
+                          fontWeight: 600,
+                          marginBottom: '4px',
+                          lineHeight: 1.35,
+                        }}
+                      >
+                        {u.firstName} {u.lastName}
+                      </div>
+                      <div style={{ color: '#66717D', fontSize: '13px', lineHeight: 1.5 }}>
+                        {u.designation || 'Member'}
+                        {assoc ? ` at ${assoc.associationName}` : ''}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </aside>
 
           {/* Right: user detail */}
           <section style={{ padding: '20px 24px 28px' }}>
-            <div
-              style={{
-                border: '1px solid #D7D7D7',
-                borderRadius: '7px',
-                overflow: 'hidden',
-                background: '#FFFFFF',
-                marginBottom: '24px',
-              }}
-            >
-              {/* identity */}
-              <div
-                className="flex items-start justify-between"
-                style={{ padding: '20px 24px', gap: '16px' }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <h2
-                    style={{
-                      color: '#102C4A',
-                      fontSize: '22px',
-                      fontWeight: 600,
-                      margin: 0,
-                      marginBottom: '4px',
-                    }}
-                  >
-                    {active.name}
-                  </h2>
-                  <div style={{ color: '#66717D', fontSize: '14px' }}>
-                    {active.role}
-                  </div>
-                </div>
-                <button
-                  type="button"
+            {!active ? (
+              <div style={{ color: '#66717D', fontSize: '15px', padding: '24px' }}>
+                {loading ? 'Loading...' : 'No user selected.'}
+              </div>
+            ) : (
+              <>
+                <div
                   style={{
-                    padding: '8px 22px',
                     border: '1px solid #D7D7D7',
+                    borderRadius: '7px',
+                    overflow: 'hidden',
                     background: '#FFFFFF',
-                    borderRadius: '9999px',
-                    color: '#102C4A',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
+                    marginBottom: '24px',
                   }}
                 >
-                  Edit
-                </button>
-              </div>
-              {/* address */}
-              <div
-                style={{
-                  padding: '0 24px 20px',
-                  color: '#102C4A',
-                  fontSize: '14px',
-                  lineHeight: 1.6,
-                }}
-              >
-                <div style={{ color: '#102C4A', fontWeight: 500, marginBottom: '2px' }}>
-                  American Bar Association
-                </div>
-                <div style={{ color: '#66717D' }}>
-                  330 N Wabash Ave, Chicago, IL 60611, USA, +018483 28293, +018483 28293, info@BarAssociation.com
-                </div>
-              </div>
-              {/* meta strip */}
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(4, 1fr)',
-                  borderTop: '1px solid #D7D7D7',
-                }}
-              >
-                {[
-                  { label: 'Invite By', value: 'Myself' },
-                  { label: 'Invitation Date', value: '20 Jan 2025 8:40 PM' },
-                  { label: 'Correct Status', value: 'Active' },
-                  { label: 'Last Active', value: '20 Jan 2025 8:40 PM' },
-                ].map((item, idx, arr) => (
+                  {/* identity */}
                   <div
-                    key={item.label}
-                    style={{
-                      padding: '16px 24px',
-                      borderRight:
-                        idx === arr.length - 1 ? 'none' : '1px solid #D7D7D7',
-                    }}
+                    className="flex items-start justify-between"
+                    style={{ padding: '20px 24px', gap: '16px' }}
                   >
-                    <div
-                      style={{
-                        color: '#66717D',
-                        fontSize: '13px',
-                        marginBottom: '4px',
-                      }}
-                    >
-                      {item.label}
+                    <div style={{ minWidth: 0 }}>
+                      <h2
+                        style={{
+                          color: '#102C4A',
+                          fontSize: '22px',
+                          fontWeight: 600,
+                          margin: 0,
+                          marginBottom: '4px',
+                        }}
+                      >
+                        {active.firstName} {active.lastName}
+                      </h2>
+                      <div style={{ color: '#66717D', fontSize: '14px' }}>
+                        {active.designation || 'Member'}
+                      </div>
                     </div>
-                    <div
+                    <button
+                      type="button"
                       style={{
+                        padding: '8px 22px',
+                        border: '1px solid #D7D7D7',
+                        background: '#FFFFFF',
+                        borderRadius: '9999px',
                         color: '#102C4A',
                         fontSize: '14px',
                         fontWeight: 500,
+                        cursor: 'pointer',
                       }}
                     >
-                      {item.value}
-                    </div>
+                      Edit
+                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {/* Activities table */}
-            <div
-              style={{
-                border: '1px solid #D7D7D7',
-                borderRadius: '7px',
-                overflow: 'hidden',
-                background: '#FFFFFF',
-              }}
-            >
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr',
-                  padding: '14px 24px',
-                  borderBottom: '1px solid #D7D7D7',
-                  color: '#102C4A',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                }}
-              >
-                <span>Activities</span>
-                <span>Date Time</span>
-              </div>
-              {Array.from({ length: 8 }).map((_, i) => (
+                  {/* association + email */}
+                  <div
+                    style={{
+                      padding: '0 24px 20px',
+                      color: '#102C4A',
+                      fontSize: '14px',
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {activeAssoc ? (
+                      <>
+                        <div style={{ color: '#102C4A', fontWeight: 500, marginBottom: '2px' }}>
+                          {activeAssoc.associationName}
+                        </div>
+                        {activeAssoc.address && (
+                          <div style={{ color: '#66717D' }}>{activeAssoc.address}</div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ color: '#66717D' }}>No association linked</div>
+                    )}
+                    <div style={{ color: '#66717D', marginTop: '4px' }}>{active.email}</div>
+                  </div>
+
+                  {/* meta strip */}
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, 1fr)',
+                      borderTop: '1px solid #D7D7D7',
+                    }}
+                  >
+                    {[
+                      { label: 'Invite By', value: 'Myself' },
+                      { label: 'Invitation Date', value: formatDate(active.createdAt) },
+                      {
+                        label: 'Current Status',
+                        value: STATUS_LABEL[active.status] ?? active.status,
+                      },
+                      { label: 'Last Active', value: '—' },
+                    ].map((item, idx, arr) => (
+                      <div
+                        key={item.label}
+                        style={{
+                          padding: '16px 24px',
+                          borderRight: idx === arr.length - 1 ? 'none' : '1px solid #D7D7D7',
+                        }}
+                      >
+                        <div style={{ color: '#66717D', fontSize: '13px', marginBottom: '4px' }}>
+                          {item.label}
+                        </div>
+                        <div style={{ color: '#102C4A', fontSize: '14px', fontWeight: 500 }}>
+                          {item.value}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Activities table — placeholder until activity tracking exists */}
                 <div
-                  key={i}
                   style={{
-                    display: 'grid',
-                    gridTemplateColumns: '2fr 1fr',
-                    padding: '22px 24px',
-                    borderBottom: i === 7 ? 'none' : '1px solid #F1F2F4',
-                    alignItems: 'center',
-                    gap: '24px',
+                    border: '1px solid #D7D7D7',
+                    borderRadius: '7px',
+                    overflow: 'hidden',
+                    background: '#FFFFFF',
                   }}
                 >
                   <div
                     style={{
-                      height: '8px',
-                      width: '85%',
-                      background: '#EEF0F3',
-                      borderRadius: '4px',
+                      display: 'grid',
+                      gridTemplateColumns: '2fr 1fr',
+                      padding: '14px 24px',
+                      borderBottom: '1px solid #D7D7D7',
+                      color: '#102C4A',
+                      fontSize: '14px',
+                      fontWeight: 600,
                     }}
-                  />
+                  >
+                    <span>Activities</span>
+                    <span>Date Time</span>
+                  </div>
                   <div
                     style={{
-                      height: '8px',
-                      width: '60%',
-                      background: '#EEF0F3',
-                      borderRadius: '4px',
+                      padding: '32px 24px',
+                      color: '#9CA3AF',
+                      fontSize: '14px',
+                      textAlign: 'center',
                     }}
-                  />
+                  >
+                    No activity recorded yet.
+                  </div>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </section>
         </div>
       </div>
