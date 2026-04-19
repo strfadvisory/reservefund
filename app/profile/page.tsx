@@ -11,6 +11,7 @@ import { PhoneInput } from '@/components/ui/phone-input';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 import { UploadLogoModal, type UploadLogoResult } from '@/components/upload-logo-modal';
+import { COMPANY_TYPE_LABELS } from '@/lib/company-types';
 import {
   Select,
   SelectContent,
@@ -29,15 +30,6 @@ const US_STATES = [
   'South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont',
   'Virginia','Washington','West Virginia','Wisconsin','Wyoming',
 ];
-
-const COMPANY_TYPE_LABELS: Record<string, string> = {
-  management: 'Management Company',
-  bank: 'Bank Office',
-  reserve: 'Reserve Study Provider',
-  advisor: 'Investor Advisor',
-  board: 'Board Members',
-  other: 'Other',
-};
 
 export default function ProfilePage() {
   const router = useRouter();
