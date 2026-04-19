@@ -73,13 +73,70 @@ function StudyPageContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [editStudyId, setEditStudyId] = useState<string | null>(null);
+  const [pendingAssocId, setPendingAssocId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchAssociations();
   }, []);
 
+  // Load study data immediately — independent of associations
+  useEffect(() => {
+    const studyId = searchParams.get('studyId');
+    if (!studyId) return;
+    fetch(`/api/studies/${studyId}`)
+      .then((r) => r.json())
+      .then(({ study }) => {
+        if (!study) return;
+        setEditStudyId(studyId);
+        setModelName(study.modelName ?? '');
+        setFormData({
+          housingUnits: study.housingUnits ?? '',
+          beginningReserveFunds: study.beginningReserveFunds ?? '',
+          sirsReserveFunds: study.sirsReserveFunds ?? '',
+          inflationRate: study.inflationRate ?? '',
+          averageMonthlyFee: study.averageMonthlyFee ?? '',
+          beginningFiscalYear: study.beginningFiscalYear ?? '',
+          yearsCovered: study.yearsCovered ?? '',
+          rateOfReturn: study.rateOfReturn ?? '',
+          annualReserveBudget: study.annualReserveBudget ?? '',
+          annualOperatingBudget: study.annualOperatingBudget ?? '',
+        });
+        const loadedItems: StudyItem[] = (study.items ?? []).map((it: any, i: number) => ({
+          no: String(i + 1).padStart(2, '0'),
+          name: it.name ?? '',
+          expected: it.expected ?? 0,
+          remaining: it.remaining ?? 0,
+          cost: it.cost ?? '',
+        }));
+        const loadedTypes: Record<number, string> = {};
+        const loadedComments: Record<number, string> = {};
+        (study.items ?? []).forEach((it: any, i: number) => {
+          loadedTypes[i] = it.sirs ?? '0';
+          if (it.comment) loadedComments[i] = it.comment;
+        });
+        setItems(loadedItems);
+        setItemTypes(loadedTypes);
+        setComments(loadedComments);
+        if (study.associationId) setPendingAssocId(study.associationId);
+      })
+      .catch(() => {});
+  }, [searchParams]);
+
+  // Apply association selection once associations list is available
+  useEffect(() => {
+    if (!pendingAssocId || associations.length === 0) return;
+    const idx = associations.findIndex((a) => a.id === pendingAssocId);
+    if (idx !== -1) {
+      setSelectedIdx(idx);
+      setPendingAssocId(null);
+    }
+  }, [pendingAssocId, associations]);
+
   useEffect(() => {
     const assocIdFromUrl = searchParams.get('associationId');
+    const studyId = searchParams.get('studyId');
+    if (studyId) return;
     if (assocIdFromUrl && associations.length > 0) {
       const idx = associations.findIndex((a) => a.id === assocIdFromUrl);
       if (idx !== -1) setSelectedIdx(idx);
@@ -311,8 +368,10 @@ function StudyPageContent() {
         comment: comments[index] || '',
       }));
 
-      const response = await fetch('/api/studies', {
-        method: 'POST',
+      const url = editStudyId ? `/api/studies/${editStudyId}` : '/api/studies';
+      const method = editStudyId ? 'PUT' : 'POST';
+      const response = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           modelName,

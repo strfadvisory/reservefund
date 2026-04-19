@@ -31,6 +31,8 @@ export async function POST(request: NextRequest) {
         beginningFiscalYear: formData.beginningFiscalYear || null,
         yearsCovered: formData.yearsCovered || null,
         rateOfReturn: formData.rateOfReturn || null,
+        annualReserveBudget: formData.annualReserveBudget || null,
+        annualOperatingBudget: formData.annualOperatingBudget || null,
         items: items,
       },
     });
@@ -42,6 +44,23 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export async function DELETE(request: NextRequest) {
+  try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const id = request.nextUrl.searchParams.get('id');
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const study = await prisma.study.findUnique({ where: { id } });
+    if (!study || study.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    await prisma.study.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Delete failed' }, { status: 500 });
+  }
+}
+
 export async function GET() {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
@@ -50,4 +69,24 @@ export async function GET() {
     orderBy: { createdAt: 'desc' },
   });
   return NextResponse.json({ studies: list });
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getSessionUser();
+    if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    const { id, isBlocked } = await request.json();
+    if (!id) return NextResponse.json({ error: 'Missing id' }, { status: 400 });
+    const study = await prisma.study.findUnique({ where: { id } });
+    if (!study || study.userId !== user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    const updated = await prisma.study.update({
+      where: { id },
+      data: { isBlocked: typeof isBlocked === 'boolean' ? isBlocked : !study.isBlocked },
+    });
+    return NextResponse.json({ success: true, study: updated });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message || 'Update failed' }, { status: 500 });
+  }
 }

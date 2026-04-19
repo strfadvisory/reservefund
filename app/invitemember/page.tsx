@@ -11,20 +11,14 @@ import { DesignationInput } from '@/components/ui/designation-input';
 import { PageFooter } from '@/components/page-footer';
 import { LeftPanel } from '@/components/left-panel';
 
-const MEMBERS = [
-  {
-    name: 'Jordan Mical',
-    subtitle: 'Super Admin , Jordiankjdk@gmail.com',
-  },
-  {
-    name: 'Mandra jonson',
-    subtitle: 'Members Management, Reserver Study data , Jordiankjdk@gmail.com',
-  },
-  {
-    name: 'Mandra jonson',
-    subtitle: 'Members Management, Reserver Study data , Jordiankjdk@gmail.com',
-  },
-];
+type Invite = {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation?: string | null;
+  status: string;
+};
 
 export default function InviteMemberPage() {
   const router = useRouter();
@@ -39,10 +33,28 @@ export default function InviteMemberPage() {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const markTouched = (field: string) => setTouched((t) => ({ ...t, [field]: true }));
   const [mounted, setMounted] = useState(false);
+  const [members, setMembers] = useState<Invite[]>([]);
+  const [loadingMembers, setLoadingMembers] = useState(true);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  const fetchMembers = async () => {
+    try {
+      const res = await fetch('/api/invite');
+      if (!res.ok) return;
+      const data = await res.json();
+      setMembers(data.invites ?? []);
+    } catch {
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
 
   useEffect(() => {
     if (!inviteOpen) return;
@@ -60,6 +72,31 @@ export default function InviteMemberPage() {
     setEmail('');
     setDesignation('');
     setTouched({});
+  };
+
+  const handleInviteSubmit = async () => {
+    markTouched('firstName');
+    markTouched('lastName');
+    markTouched('email');
+    markTouched('designation');
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !designation.trim()) return;
+    try {
+      const res = await fetch('/api/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email,
+          designation,
+          permissions: { modifyStudy, createPlans, viewPlans },
+        }),
+      });
+      if (res.ok) {
+        closeInvite();
+        fetchMembers();
+      }
+    } catch {}
   };
 
   const handleConfirm = () => {
@@ -162,7 +199,7 @@ export default function InviteMemberPage() {
                     marginBottom: '20px',
                   }}
                 >
-                  5 Members Found
+                  {loadingMembers ? 'Loading...' : `${members.length} Member${members.length !== 1 ? 's' : ''} Found`}
                 </h2>
                 <div
                   style={{
@@ -174,9 +211,9 @@ export default function InviteMemberPage() {
                     paddingRight: '4px',
                   }}
                 >
-                  {MEMBERS.map((m, idx) => (
+                  {members.map((m: Invite, idx: number) => (
                     <div
-                      key={idx}
+                      key={m.id ?? idx}
                       className="flex items-start justify-between"
                       style={{ gap: '12px' }}
                     >
@@ -189,7 +226,7 @@ export default function InviteMemberPage() {
                             marginBottom: '4px',
                           }}
                         >
-                          {m.name}
+                          {m.firstName} {m.lastName}
                         </div>
                         <div
                           style={{
@@ -198,7 +235,7 @@ export default function InviteMemberPage() {
                             lineHeight: 1.4,
                           }}
                         >
-                          {m.subtitle}
+                          {[m.designation, m.email].filter(Boolean).join(' · ')}
                         </div>
                       </div>
                       <button
@@ -496,7 +533,7 @@ export default function InviteMemberPage() {
                 {/* Invite button */}
                 <button
                   type="button"
-                  onClick={closeInvite}
+                  onClick={handleInviteSubmit}
                   className="w-full font-semibold text-white transition-all duration-200 hover:opacity-95"
                   style={{
                     backgroundColor: '#0E519B',
