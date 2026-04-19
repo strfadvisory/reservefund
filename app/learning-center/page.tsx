@@ -585,7 +585,6 @@ export default function LearningCenterPage() {
                         background: isActive ? '#F1F4F9' : '#FFFFFF',
                         cursor: 'pointer',
                         border: 'none',
-                        borderBottom: '1px solid #F1F2F4',
                         borderLeft: isActive ? '3px solid #0E519B' : '3px solid transparent',
                       }}
                     >
