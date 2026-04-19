@@ -16,16 +16,22 @@ export type UploadLogoModalProps = {
   title?: string;
 };
 
+const CONTAINER = 320;
+const MASK = 100;
+const MASK_LEFT = (CONTAINER - MASK) / 2;
+const MASK_TOP = (CONTAINER - MASK) / 2;
+
 export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your logo' }: UploadLogoModalProps) {
   const [mounted, setMounted] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [size, setSize] = useState(60);
-  const [pixelDims, setPixelDims] = useState({ w: 0, h: 0 });
-  const [naturalRatio, setNaturalRatio] = useState<number | null>(null);
+  const [natural, setNatural] = useState({ w: 0, h: 0 });
+  const [imgPos, setImgPos] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(0); // 0-100 slider; mapped to scale range
+  const [dragging, setDragging] = useState<null | { dx: number; dy: number }>(null);
+
   const inputRef = useRef<HTMLInputElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => setMounted(true), []);
 
@@ -48,33 +54,44 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  const minScale = natural.w && natural.h ? Math.max(MASK / natural.w, MASK / natural.h) : 1;
+  const maxScale = Math.max(minScale * 4, minScale + 0.01);
+  const scale = minScale + ((maxScale - minScale) * zoom) / 100;
+  const dw = natural.w * scale;
+  const dh = natural.h * scale;
+
+  const clamp = (pos: { x: number; y: number }, dispW: number, dispH: number) => ({
+    x: Math.min(MASK_LEFT, Math.max(MASK_LEFT + MASK - dispW, pos.x)),
+    y: Math.min(MASK_TOP, Math.max(MASK_TOP + MASK - dispH, pos.y)),
+  });
+
+  // Center image on first load / natural-dims change
   useEffect(() => {
-    if (!preview) {
-      setPixelDims({ w: 0, h: 0 });
-      setNaturalRatio(null);
-      return;
-    }
-    const measure = () => {
-      const el = imgRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      setPixelDims({ w: Math.round(rect.width), h: Math.round(rect.height) });
-    };
-    const raf = requestAnimationFrame(measure);
-    window.addEventListener('resize', measure);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener('resize', measure);
-    };
-  }, [preview, size]);
+    if (!natural.w || !natural.h) return;
+    const s = minScale; // start at min (zoom=0)
+    const w = natural.w * s;
+    const h = natural.h * s;
+    setImgPos(clamp({ x: (CONTAINER - w) / 2, y: (CONTAINER - h) / 2 }, w, h));
+    setZoom(0);
+  }, [natural.w, natural.h]);
+
+  // Re-clamp on zoom change, preserving mask-center focus
+  useEffect(() => {
+    if (!natural.w || !natural.h) return;
+    setImgPos((prev) => {
+      // find which natural-image point is at mask center now
+      // prevScale used prev dw/dh ratio; approximate by re-clamping with new dims
+      return clamp(prev, dw, dh);
+    });
+  }, [zoom, natural.w, natural.h]);
 
   const reset = () => {
     setFile(null);
     setPreview(null);
     setDragActive(false);
-    setSize(60);
-    setPixelDims({ w: 0, h: 0 });
-    setNaturalRatio(null);
+    setNatural({ w: 0, h: 0 });
+    setImgPos({ x: 0, y: 0 });
+    setZoom(0);
   };
 
   const handleClose = () => {
@@ -90,8 +107,68 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
     setFile(f);
   };
 
-  const handleApply = () => {
-    if (file && onApply) onApply({ file, size });
+  const onImgMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragging({ dx: e.clientX - imgPos.x, dy: e.clientY - imgPos.y });
+  };
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent) => {
+      const raw = { x: e.clientX - dragging.dx, y: e.clientY - dragging.dy };
+      setImgPos(clamp(raw, dw, dh));
+    };
+    const onUp = () => setDragging(null);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [dragging, dw, dh]);
+
+  const handleApply = async () => {
+    if (!file || !preview || !natural.w) {
+      handleClose();
+      return;
+    }
+    // Source area on natural image corresponding to the 100x100 mask
+    const sx = Math.max(0, Math.round((MASK_LEFT - imgPos.x) / scale));
+    const sy = Math.max(0, Math.round((MASK_TOP - imgPos.y) / scale));
+    const sSize = Math.round(MASK / scale);
+
+    const img = new window.Image();
+    img.src = preview;
+    await new Promise<void>((resolve, reject) => {
+      if (img.complete) resolve();
+      else {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+      }
+    });
+
+    const OUT = 400;
+    const canvas = document.createElement('canvas');
+    canvas.width = OUT;
+    canvas.height = OUT;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      handleClose();
+      return;
+    }
+    ctx.drawImage(img, sx, sy, sSize, sSize, 0, 0, OUT, OUT);
+
+    const mime = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+    const blob: Blob = await new Promise((resolve) =>
+      canvas.toBlob((b) => resolve(b as Blob), mime, 0.92),
+    );
+    const croppedFile = new File(
+      [blob],
+      file.name.replace(/\.(png|jpe?g)$/i, '') + '-cropped.' + (mime === 'image/jpeg' ? 'jpg' : 'png'),
+      { type: mime },
+    );
+
+    if (onApply) onApply({ file: croppedFile, size: zoom });
     handleClose();
   };
 
@@ -147,14 +224,13 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
         <div style={{ padding: '24px 32px 20px' }}>
           {preview ? (
             <div
-              className="flex flex-col items-stretch"
+              className="flex flex-col items-center"
               style={{
-                position: 'relative',
                 padding: '24px 28px 22px',
                 border: '1.5px dashed #B5BCC4',
                 borderRadius: '8px',
                 background: '#F4F6F9',
-                minHeight: '280px',
+                position: 'relative',
               }}
             >
               <div
@@ -171,56 +247,133 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
                   fontWeight: 600,
                 }}
               >
-                {pixelDims.w} × {pixelDims.h}px
+                {MASK} × {MASK}px
               </div>
+
               <div
-                className="flex items-center justify-center"
                 style={{
-                  height: '220px',
-                  marginBottom: '18px',
+                  position: 'relative',
+                  width: `${CONTAINER}px`,
+                  height: `${CONTAINER}px`,
+                  background: '#FFFFFF',
+                  border: '1px solid #D7D7D7',
                   overflow: 'hidden',
+                  userSelect: 'none',
+                  cursor: dragging ? 'grabbing' : 'grab',
+                  marginBottom: '18px',
                 }}
+                onMouseDown={onImgMouseDown}
               >
-                <img
-                  ref={imgRef}
-                  onLoad={(e) => {
-                    const t = e.currentTarget;
-                    if (t.naturalWidth && t.naturalHeight) {
-                      setNaturalRatio(t.naturalWidth / t.naturalHeight);
-                    }
-                    const rect = t.getBoundingClientRect();
-                    setPixelDims({
-                      w: Math.round(rect.width),
-                      h: Math.round(rect.height),
-                    });
-                  }}
-                  src={preview}
-                  alt="Logo preview"
-                  style={{
-                    width: `${size}%`,
-                    height: 'auto',
-                    aspectRatio: naturalRatio ? `${naturalRatio}` : undefined,
-                    display: 'block',
-                    objectFit: 'contain',
-                  }}
-                />
+                {preview && natural.w > 0 && (
+                  <img
+                    src={preview}
+                    alt="Logo"
+                    draggable={false}
+                    style={{
+                      position: 'absolute',
+                      left: imgPos.x,
+                      top: imgPos.y,
+                      width: dw,
+                      height: dh,
+                      pointerEvents: 'none',
+                      userSelect: 'none',
+                    }}
+                  />
+                )}
+                {/* Hidden loader to read natural dimensions */}
+                {preview && !natural.w && (
+                  <img
+                    src={preview}
+                    alt=""
+                    onLoad={(e) => {
+                      const t = e.currentTarget;
+                      setNatural({ w: t.naturalWidth, h: t.naturalHeight });
+                    }}
+                    style={{ position: 'absolute', opacity: 0, pointerEvents: 'none' }}
+                  />
+                )}
+
+                {/* Dark overlay outside mask */}
+                {natural.w > 0 && (
+                  <>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: CONTAINER,
+                        height: MASK_TOP,
+                        background: 'rgba(16, 44, 74, 0.45)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: MASK_TOP + MASK,
+                        width: CONTAINER,
+                        height: CONTAINER - MASK_TOP - MASK,
+                        background: 'rgba(16, 44, 74, 0.45)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: MASK_TOP,
+                        width: MASK_LEFT,
+                        height: MASK,
+                        background: 'rgba(16, 44, 74, 0.45)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: MASK_LEFT + MASK,
+                        top: MASK_TOP,
+                        width: CONTAINER - MASK_LEFT - MASK,
+                        height: MASK,
+                        background: 'rgba(16, 44, 74, 0.45)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                    {/* Fixed mask frame */}
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: MASK_LEFT,
+                        top: MASK_TOP,
+                        width: MASK,
+                        height: MASK,
+                        border: '2px solid #FFFFFF',
+                        boxShadow: '0 0 0 1px rgba(16, 44, 74, 0.35)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  </>
+                )}
               </div>
+
               <div
                 style={{
                   color: '#66717D',
                   fontSize: '14px',
                   marginBottom: '10px',
+                  alignSelf: 'stretch',
                 }}
               >
                 Manage Size
               </div>
               <input
                 type="range"
-                min={20}
+                min={0}
                 max={100}
                 step={1}
-                value={size}
-                onChange={(e) => setSize(Number(e.target.value))}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
                 className="logo-size-slider"
                 style={{
                   width: '100%',
@@ -229,7 +382,7 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
               />
               <div
                 className="flex items-center justify-between"
-                style={{ marginTop: '14px' }}
+                style={{ marginTop: '14px', alignSelf: 'stretch' }}
               >
                 <button
                   type="button"
@@ -371,7 +524,7 @@ export function UploadLogoModal({ open, onClose, onApply, title = 'Upload your l
             className="w-full font-semibold text-white transition-all duration-200"
             style={{
               marginTop: '22px',
-              backgroundColor: file ? '#0E519B' : '#0E519B',
+              backgroundColor: '#0E519B',
               opacity: file ? 1 : 0.75,
               borderRadius: '7px',
               padding: '14px',
